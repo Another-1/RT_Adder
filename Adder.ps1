@@ -24,11 +24,6 @@ $forceNoProxy = $false
 $ini_path = $tlo_path  + '\data\config.ini'
 $ini_data = Get-IniContent $ini_path
 
-if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyContinue) ) ) {
-    Write-Output 'Не установлен модуль PSSQLite, ставим...'
-    Install-Module -Name PSSQLite -Scope CurrentUser -Force
-}
-
 $sections = $ini_data.sections.subsections.split( ',' )
 
 Write-Host 'Достаём из TLO данные о разделах'
