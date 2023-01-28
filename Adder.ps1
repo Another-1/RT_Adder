@@ -1,3 +1,10 @@
+Write-Host 'Проверяем версию Powershell...'
+If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
+    Write-Host 'У вас слишком древний Powershell, обновитесь с https://github.com/PowerShell/PowerShell#get-powershell ' -ForegroundColor Red
+    Pause
+    Exit
+}
+
 . "$PSScriptRoot\_functions.ps1"
 
 if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue) ) ) {
