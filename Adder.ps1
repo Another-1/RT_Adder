@@ -1,30 +1,46 @@
-. "$PSScriptRoot\RT_settings.ps1"
-. "$PSScriptRoot\RT_functions.ps1"
+. "$PSScriptRoot\_functions.ps1"
+
+If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
+    . "$PSScriptRoot\_setuper.ps1"    
+}
+. "$PSScriptRoot\_settings.ps1"
+
+if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue) ) ) {
+    Write-Output 'Не установлен модуль PSIni, ставим'
+    Install-Module -Name PsIni -Scope CurrentUser
+}
+
+if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyContinue) ) ) {
+    Write-Output 'Не установлен модуль PSSQLite, ставим'
+    Install-Module -Name PSSQLite -Scope CurrentUser
+}
 
 $database_path = $PSScriptRoot + '\topics.sqlite'
-$conn = New-SqliteConnection -DataSource $database_path
+$db_conn = New-SqliteConnection -DataSource $database_path
 
-$INI_data = Get-IniContent "\\nas-2\OpenServer\domains\webtlo.local\data\config.ini"
+$ini_data = Get-IniContent $ini_path
 
-$sections = $INI_data.sections.subsections.split( ',' )
-
-### DEBUG ### 
-# $sections = $sections | Where-Object { $_ -ne '1842' }
-# $Sections = @(704)
-### DEBUG ### 
+$sections = $ini_data.sections.subsections.split( ',' )
 
 $section_details = @{}
-$INI_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($INI_data[ $_ ].client, $INI_data[ $_ ].'data-folder' ) }
+$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder' ) }
 $tracker_torrents = @{}
 
+If ( [bool]$ini_data.proxy.activate_forum ) {
+    Write-Host ( 'Используем ' + $ini_data.proxy.type + ' прокси ' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port )
+}
 foreach ( $section in $sections ) {
     Write-Host ('Получаем с трекера раздачи раздела ' + $section )
     $i = 1
-    # while ( $i -lt 10) {
     while ( $true) {
         Remove-Variable -Name tmp_torrents -ErrorAction SilentlyContinue
         try {
-            $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" ).Content | ConvertFrom-Json -AsHashtable ).result
+            if ( [bool]$ini_data.proxy.activate_forum ) {
+                $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $proxy_url ).Content | ConvertFrom-Json -AsHashtable ).result
+            }
+            else {
+                $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" ).Content | ConvertFrom-Json -AsHashtable ).result
+            }
             break
         }
         catch { Start-Sleep -Seconds 10; $i++; Write-Host "Попытка номер $i" -ForegroundColor Cyan }
@@ -34,7 +50,6 @@ foreach ( $section in $sections ) {
         exit 
     }
     $tmp_torrents.Keys | Where-Object { $tmp_torrents[$_][0] -in (0, 2, 3, 8, 10 ) } | ForEach-Object {
-        # $tracker_torrents[$_] = @{ hash = $tmp_torrents[$_][7]; section = $section }
         $tracker_torrents[$tmp_torrents[$_][7]] = @{ id = $_; section = $section.ToInt32($nul); status = $tmp_torrents[$_][0]; name = $nul; reg_time = $tmp_torrents[$_][2]; size = $tmp_torrents[$_][3] }
     }
 }
@@ -55,7 +70,7 @@ foreach ($clientkey in $clients.Keys ) {
     $clients_torrents += $client_torrents
     # $client_torrents_list.Keys | ForEach-Object { $clients_torrents[$_] = $torrents_list[$_] }
 }
-$conn.Close()
+$db_conn.Close()
 
 $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
     $clients_tor_sort[$_.hash] = $_.topic_id
@@ -128,7 +143,7 @@ if ( $new_torrents_keys) {
             Start-Sleep -Milliseconds 100
         }
         elseif ( `
-            !$existing_torrent
+                !$existing_torrent
             # -and (( $new_tracker_data.status.ToString() -ne "0" ) -or ( $now - $new_tracker_data.reg_time -gt 7 * 24 * 60 * 60 ) )
         ) {
             if ( !$forum.sid ) { Initialize-Forum }
@@ -152,5 +167,3 @@ if ( $new_torrents_keys) {
         Send-Report
     }
 }
-
-
