@@ -1,5 +1,5 @@
 $tlo_path = 'C:\OpenServer\domains\webtlo.local'
-$php_path = 'C:\OpenServer\modules\php\PHP_8.1\php.exe'
+# $php_path = 'C:\OpenServer\modules\php\PHP_8.1\php.exe'
 $max_seeds = -1
 Clear-Host
 Write-Host 'Не обнаружено настроек' -ForegroundColor Red
