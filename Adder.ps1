@@ -70,7 +70,7 @@ $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
 }
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
 
-$update_required = $false
+# $update_required = $false
 if ( $new_torrents_keys) {
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
@@ -103,7 +103,7 @@ if ( $new_torrents_keys) {
             else {
                 Remove-ClientTorrent $client $existing_torrent.hash $true
             }
-            $update_required = $true
+            # $update_required = $true
             Start-Sleep -Milliseconds 100
         }
         elseif ( !$existing_torrent ) {
@@ -113,7 +113,7 @@ if ( $new_torrents_keys) {
             Write-Host $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
             Add-ClientTorrent $client $new_torrent_file $section_details[$new_tracker_data.section][1] ( Get-ForumName $new_tracker_data.section.ToString() )
-            $update_required = $true
+            # $update_required = $true
             Start-Sleep -Milliseconds 100
         }
     }
