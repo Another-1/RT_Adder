@@ -75,10 +75,10 @@ if ( $new_torrents_keys) {
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
+        $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
         $existing_torrent = $clients_torrents | Where-Object { $_.topic_id -eq $new_tracker_data.id }
         if ( $existing_torrent ) {
             $client = $clients[$existing_torrent.client_key]
-            $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
         }
         else {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
@@ -112,7 +112,14 @@ if ( $new_torrents_keys) {
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
             Write-Host $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
-            Add-ClientTorrent $client $new_torrent_file $section_details[$new_tracker_data.section][1] ( Get-ForumName $new_tracker_data.section.ToString() )
+            $save_path = $section_details[$new_tracker_data.section][1]
+            if ( $subfolder_kind -eq 1 ) {
+                $save_path = ( $save_path -replace( '\\$','')) + '\' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
+            }
+            elseif ( $subfolder_kind -eq 2 ) {
+                $save_path = ( $save_path -replace( '\\$','')) + '\' + $new_torrent_key  # добавляем hash к имени папки для сохранения
+            }
+            Add-ClientTorrent $client $new_torrent_file $save_path ( Get-ForumName $new_tracker_data.section.ToString() )
             # $update_required = $true
             Start-Sleep -Milliseconds 100
         }
