@@ -1,3 +1,13 @@
+function Send-TGMessage ( $message, $token, $chat_id ) {
+    $payload = @{
+        "chat_id"                  = $chat_id
+        "parse_mode"               = 'html'
+        "disable_web_page_preview" = $true
+        "text"                     = $message
+    }
+    
+    Invoke-WebRequest -Uri ("https://api.telegram.org/bot{0}/sendMessage" -f $token) -Method Post  -ContentType "application/json;charset=utf-8" -Body (ConvertTo-Json -Compress -InputObject $payload) | Out-Null
+}
 function Initialize-Client ($client) {
     if ( !$client.sid ) {
         $logindata = @{
@@ -144,10 +154,14 @@ function Get-ForumName( $section ) {
 function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
     try {
         if ( $deleteFiles -eq $true ) {
-            Write-Host ( 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' вместе с файлами')
+            $text = 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' вместе с файлами'
+            Write-Host $text
+            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
         }
         else {
-            Write-Host ( 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' без удаления файлов')
+            $text = 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' без удаления файлов'
+            Write-Host $text
+            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
         }
         $request_delete = @{
             hashes      = $hash
@@ -206,3 +220,4 @@ function Get-SectionTorrents ( $forum, $section, $max_seeds) {
     Write-Host
     return $tmp_torrents
 }
+

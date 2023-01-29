@@ -85,9 +85,9 @@ if ( $new_torrents_keys) {
         if ( $existing_torrent ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
-            $payload.text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
-            Write-Host $payload.text
-
+            $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
+            Write-Host $text
+            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
             Add-ClientTorrent $client $new_torrent_file $existing_torrent.save_path $existing_torrent.category
 
             While ($true) {
@@ -108,7 +108,9 @@ if ( $new_torrents_keys) {
         elseif ( !$existing_torrent ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
-            Write-Host ( "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name )
+            $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
+            Write-Host $text
+            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
             Add-ClientTorrent $client $new_torrent_file $section_details[$new_tracker_data.section][1] ( Get-ForumName $new_tracker_data.section.ToString() )
             $update_required = $true
             Start-Sleep -Milliseconds 100

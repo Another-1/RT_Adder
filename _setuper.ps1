@@ -19,17 +19,11 @@ if ( ( $prompt = Read-host -Prompt "Максимальное кол-во сид�
     $max_seeds = [int]$prompt
 }
 
-Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds ) | Out-File "$PSScriptRoot\_settings.ps1"
+if ( ( $prompt = Read-host -Prompt "Токен бота Telegram, если нужна отправка событий в Telegram. Если не нужно, оставить пустым" ) -ne '' ) {
+    $tg_token  = $prompt
+    if ( ( $prompt = Read-host -Prompt "Номер чата для отправки сообщений Telegram" ) -ne '' ) {
+        $tg_chat  = $prompt
+    }
+}
 
-# . "$PSScriptRoot\_settings.ps1"
-# $ini_data = Get-IniContent $ini_path
-# if ( $ini_data.proxy.type -eq 'socks5h' ) {
-#     Write-Host 'ВНИМАНИЕ! Powershell не поддерживает прокси типа SOCKS5H! Если у вас есть прямой доступ до трекера без прокси, можно его отключить. Другого решения (пока) нет.' -ForegroundColor Red
-#     if ( ( $prompt = Read-Host -Prompt 'Отключить использование прокси? (Y/N) [Y]' ).ToLower() -eq 'n' ) {
-#         Write-Host 'Тогда ничего не получится, выходим' -ForegroundColor Red
-#         Remove-Item -Path "$PSScriptRoot\_settings.ps1"
-#     }
-#     else {
-#         Write-Output ( '$ini_path = ' + "'$ini_path'" + "`r`n" + '$max_seeds = ' + "'$max_seeds'" + "`r`n" + '$forceNoProxy = $true') | Out-File "$PSScriptRoot\_settings.ps1"
-#     }
-# }
+Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds  + "`r`n" + '$tg_token = '  + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
