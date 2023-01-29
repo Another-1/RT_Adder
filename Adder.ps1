@@ -117,9 +117,9 @@ if ( $new_torrents_keys) {
             Start-Sleep -Milliseconds 100
         }
     }
-    if ( $update_required ) {
-        Write-Host 'Ждём 5 минут, вдруг что-то успеет скачаться...'
-        Start-Sleep -Seconds 300
-        Send-Report
-    }
+    # if ( $update_required ) {
+    #     Write-Host 'Ждём 5 минут, вдруг что-то успеет скачаться...'
+    #     Start-Sleep -Seconds 300
+    #     Send-Report
+    # }
 }

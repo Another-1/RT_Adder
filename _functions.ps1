@@ -175,18 +175,18 @@ function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
 }
 
 function Send-Report {
-    lock_file = "$PSScriptRoot\in_progress.lck"
-    $in_progress = Test-Path -Path $lockfile
+    $lock_file = "$PSScriptRoot\in_progress.lck"
+    $in_progress = Test-Path -Path $lock_file
     if ( !$in_progress ) {
         New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
         Write-Host 'Обновляем БД'
-        . c:\OpenServer\modules\php\PHP_8.1\php.exe c:\OpenServer\domains\webtlo.local\cron\update.php
+        . $php_path "$tlo_path\cron\update.php"
         Write-Host 'Шлём отчёт'
-        . c:\OpenServer\modules\php\PHP_8.1\php.exe c:\OpenServer\domains\webtlo.local\cron\reports.php
-        Remove-Item $lockfile
+        . $php_path "$tlo_path\cron\reports.php"
+        Remove-Item $lock_file
     }
     else {
-        Write-Host "Обнаружен файл блокировки $lockfile. Вероятно, запущен параллельный процесс. Если это не так, удалите файл" -ForegroundColor Red
+        Write-Host "Обнаружен файл блокировки $lock_file. Вероятно, запущен параллельный процесс. Если это не так, удалите файл" -ForegroundColor Red
     }
 }
 
