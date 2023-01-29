@@ -28,7 +28,7 @@ $sections = $ini_data.sections.subsections.split( ',' )
 
 Write-Host 'Достаём из TLO данные о разделах'
 $section_details = @{}
-$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder' ) }
+$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder',  $ini_data[ $_ ].'data-sub-folder' ) }
 $tracker_torrents = @{}
 
 If ( ( [bool]$ini_data.proxy.activate_forum -or [bool]$ini_data.proxy.activate_api ) -and ( -not $forceNoProxy ) ) {
@@ -78,6 +78,7 @@ if ( $new_torrents_keys) {
         $existing_torrent = $clients_torrents | Where-Object { $_.topic_id -eq $new_tracker_data.id }
         if ( $existing_torrent ) {
             $client = $clients[$existing_torrent.client_key]
+            $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
         }
         else {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
@@ -96,7 +97,7 @@ if ( $new_torrents_keys) {
                 $new_tracker_data.name = ( Get-Torrents $client '' $false $new_torrent_key $nul ).name
                 if ( $nul -ne $new_tracker_data.name ) { break }
             }
-            if ( $new_tracker_data.name -eq $existing_torrent.name ) {
+            if ( $new_tracker_data.name -eq $existing_torrent.name -and $subfolder_kind -le '2') {
                 Remove-ClientTorrent $client $existing_torrent.hash $false
             }
             else {
