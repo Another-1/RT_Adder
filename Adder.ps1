@@ -14,7 +14,8 @@ if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue
 
 $forum = @{}
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
-    . "$PSScriptRoot\_setuper.ps1"    
+    # . "$PSScriptRoot\_setuper.ps1"
+    Set-Preferences
 }
 else { . "$PSScriptRoot\_settings.ps1" }
 
