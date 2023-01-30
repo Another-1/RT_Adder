@@ -29,7 +29,7 @@ $sections = $ini_data.sections.subsections.split( ',' )
 
 Write-Host 'Достаём из TLO данные о разделах'
 $section_details = @{}
-$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder',  $ini_data[ $_ ].'data-sub-folder' ) }
+$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder',  $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics' ) }
 $tracker_torrents = @{}
 
 If ( ( [bool]$ini_data.proxy.activate_forum -or [bool]$ini_data.proxy.activate_api ) -and ( -not $forceNoProxy ) ) {
@@ -44,6 +44,11 @@ $forum.Login = $ini_data.'torrent-tracker'.login
 $forum.Password = $ini_data.'torrent-tracker'.password
 
 foreach ( $section in $sections ) {
+    If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
+        Write-Host ('Пропускаем скрытый раздел ' + $section )
+        Write-Host ''
+        continue
+    }
     Write-Host ('Получаем с трекера раздачи раздела ' + $section )
     $section_torrents = Get-SectionTorrents $forum $section $max_seeds
     $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10 ) } | ForEach-Object {
