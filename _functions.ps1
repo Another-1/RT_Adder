@@ -8,6 +8,28 @@ function Send-TGMessage ( $message, $token, $chat_id ) {
     
     Invoke-WebRequest -Uri ("https://api.telegram.org/bot{0}/sendMessage" -f $token) -Method Post  -ContentType "application/json;charset=utf-8" -Body (ConvertTo-Json -Compress -InputObject $payload) | Out-Null
 }
+
+function Send-TGReport ( $refreshed, $added, $token, $chat_id ) {
+    $message = ''
+    $first = $true
+    foreach ( $key in $refreshed.Keys ) {
+        if ( !$first ) { $message += "`n`n"}
+        $first = $false
+        $message += "Обновлены в клиенте $key :"
+        $refreshed[$key] | ForEach-Object { $message += "`n$_"}
+    }
+
+    if ( $message -ne '' ) { $message += "`n`n" }
+    $first = $true
+    foreach ( $key in $added.Keys ) {
+        if ( !$first ) { $message += "`n`n"}
+        $first = $false
+        $message += "Добавлены в клиент $key :"
+        $added[$key] | ForEach-Object { $message += "`n$_"}
+    }
+    Send-TGMessage $message $token $chat_id
+}
+
 function Initialize-Client ($client) {
     if ( !$client.sid ) {
         $logindata = @{
@@ -241,21 +263,11 @@ function Set-Preferences {
         }
         Write-Host 'Не нахожу такого файла, проверьте ввод' -ForegroundColor Red
     }
-    # Write-Host 'Для запуска скриптов обновления БД TLO и отправки отчётов мне нужен путь к php.exe'
-    # Write-Host 'Если путь верный, можно просто нажать Enter. Если нет - укажите верный'
-    # while ( $true ) {
-    #     If ( ( $prompt = Read-Host -Prompt "Путь к папке Web-TLO [$php_path]" ) -ne '' ) {
-    #         $php_path = $prompt -replace ( '\s+$', '') -replace '\\$','' 
-    #     }
-    #     If ( Test-Path $php_path ) {
-    #         break
-    #     }
-    #     Write-Host 'Похоже вы ошиблись, проверьте ввод' -ForegroundColor Red
-    # }
-    
+
     if ( ( $prompt = Read-host -Prompt "Максимальное кол-во сидов для скачивания раздачи [$max_seeds]" ) -ne '' ) {
         $max_seeds = [int]$prompt
     }
+
     while ( $true ) {
         If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из скрытых разделов Web-TLO? (Y/N) [$get_hidden]" ) -ne '' ) {
             $get_hidden = $prompt.ToUpper() 

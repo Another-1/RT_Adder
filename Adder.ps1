@@ -22,18 +22,18 @@ else { . "$PSScriptRoot\_settings.ps1" }
 Write-Output 'Читаем настройки Web-TLO'
 $forceNoProxy = $false
 
-$ini_path = $tlo_path  + '\data\config.ini'
+$ini_path = $tlo_path + '\data\config.ini'
 $ini_data = Get-IniContent $ini_path
 
 $sections = $ini_data.sections.subsections.split( ',' )
 
 Write-Host 'Достаём из TLO данные о разделах'
 $section_details = @{}
-$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder',  $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics' ) }
+$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder', $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics', $ini_data[ $_ ].'label' ) }
 $tracker_torrents = @{}
 
 If ( ( [bool]$ini_data.proxy.activate_forum -or [bool]$ini_data.proxy.activate_api ) -and ( -not $forceNoProxy ) ) {
-    Write-Host ( 'Используем ' + $ini_data.proxy.type.Replace('socks5h','socks5') + ' прокси ' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port )
+    Write-Host ( 'Используем ' + $ini_data.proxy.type.Replace('socks5h', 'socks5') + ' прокси ' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port )
     $forum.UseApiProxy = $ini_data.proxy.activate_api
     $forum.ProxyIP = $ini_data.proxy.hostname
     $forum.ProxyPort = $ini_data.proxy.port
@@ -61,7 +61,7 @@ $clients_torrents = @()
 $clients_tor_sort = @{}
 
 Write-Host 'Получаем из TLO данные о клиентах'
-$ini_data.keys | Where-Object { $_ -match '^torrent-client'} | ForEach-Object { $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port;}} 
+$ini_data.keys | Where-Object { $_ -match '^torrent-client' } | ForEach-Object { $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; } } 
 
 foreach ($clientkey in $clients.Keys ) {
     $client = $clients[ $clientkey ]
@@ -76,8 +76,9 @@ $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
 }
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
 
-# $update_required = $false
 if ( $new_torrents_keys) {
+    $added = @{}
+    $refreshed = @{}
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
@@ -94,7 +95,10 @@ if ( $new_torrents_keys) {
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
             Write-Host $text
-            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
+            if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
+                if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
+                $refreshed[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
+            }
             Add-ClientTorrent $client $new_torrent_file $existing_torrent.save_path $existing_torrent.category
 
             While ($true) {
@@ -109,7 +113,6 @@ if ( $new_torrents_keys) {
             else {
                 Remove-ClientTorrent $client $existing_torrent.hash $true
             }
-            # $update_required = $true
             Start-Sleep -Milliseconds 100
         }
         elseif ( !$existing_torrent ) {
@@ -117,22 +120,20 @@ if ( $new_torrents_keys) {
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
             Write-Host $text
-            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
+            if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
+                if ( !$added[ $client.Name] ) { $added[ $client.Name] = @() }
+                $added[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
+            }
             $save_path = $section_details[$new_tracker_data.section][1]
             if ( $subfolder_kind -eq 1 ) {
-                $save_path = ( $save_path -replace( '\\$','')) + '/' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
+                $save_path = ( $save_path -replace ( '\\$', '')) + '/' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
             }
             elseif ( $subfolder_kind -eq 2 ) {
-                $save_path = ( $save_path -replace( '\\$','')) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
+                $save_path = ( $save_path -replace ( '\\$', '')) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
-            Add-ClientTorrent $client $new_torrent_file $save_path ( Get-ForumName $new_tracker_data.section.ToString() )
-            # $update_required = $true
+            Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
             Start-Sleep -Milliseconds 100
         }
     }
-    # if ( $update_required ) {
-    #     Write-Host 'Ждём 5 минут, вдруг что-то успеет скачаться...'
-    #     Start-Sleep -Seconds 300
-    #     Send-Report
-    # }
+    if ( $refreshed -or $added ) { Send-TGReport $refreshed $added $tg_token $tg_chat }
 }
