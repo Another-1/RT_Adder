@@ -301,6 +301,7 @@ function Get-Separator {
 }
 
 function Get-Blacklist {
+    Write-Host 'Запрашиваем чёрный список из БД Web-TLO'
     $blacklist = @{}
     $sepa = Get-Separator
     $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
