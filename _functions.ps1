@@ -248,6 +248,7 @@ function Set-Preferences {
     # $php_path = 'C:\OpenServer\modules\php\PHP_8.1\php.exe'
     $max_seeds = -1
     $get_hidden = 'N'
+    $get_blacklist = 'N'
     Clear-Host
     Write-Host 'Не обнаружено настроек' -ForegroundColor Red
     Write-Host 'Вот и создадим их.' -ForegroundColor Green
@@ -276,6 +277,14 @@ function Set-Preferences {
         Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
+    while ( $true ) {
+        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из чёрного списка Web-TLO? (Y/N) [$get_blacklist]" ) -ne '' ) {
+            $get_blacklist = $prompt.ToUpper() 
+        }
+        If ( $get_blacklist -match '^[Y|N]$' ) { break }
+        Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
+    }
+
     if ( ( $prompt = Read-host -Prompt "Токен бота Telegram, если нужна отправка событий в Telegram. Если не нужно, оставить пустым" ) -ne '' ) {
         $tg_token = $prompt
         if ( ( $prompt = Read-host -Prompt "Номер чата для отправки сообщений Telegram" ) -ne '' ) {
@@ -283,6 +292,21 @@ function Set-Preferences {
         }
     }
     
-    # Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$php_path = ' + "'$php_path'" + "`r`n" + '$max_seeds = ' + $max_seeds  + "`r`n" + '$tg_token = '  + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
-    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+}
+
+function Get-Separator {
+    if ( $PSVersionTable.OS.ToLower().contains('windows')) { $separator = '\' } else { $separator = '/' }
+    return $separator
+}
+
+function Get-Blacklist {
+    $blacklist = @{}
+    $sepa = Get-Separator
+    $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
+    $conn = New-SqliteConnection -DataSource $database_path
+    $query = 'SELECT info_hash FROM TopicsExcluded'
+    Invoke-SqliteQuery -Query $query -SQLiteConnection $conn | ForEach-Object { $blacklist[$_.info_hash] = 1 }
+    $conn.Close()
+    return $blacklist
 }

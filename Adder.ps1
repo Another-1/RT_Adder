@@ -43,6 +43,8 @@ $forum.UseProxy = $ini_data.proxy.activate_forum
 $forum.Login = $ini_data.'torrent-tracker'.login
 $forum.Password = $ini_data.'torrent-tracker'.password
 
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklist = Get-Blacklist }
+
 foreach ( $section in $sections ) {
     If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
         Write-Host ('Пропускаем скрытый раздел ' + $section )
@@ -74,7 +76,16 @@ foreach ($clientkey in $clients.Keys ) {
 $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
     $clients_tor_sort[$_.hash] = $_.topic_id
 }
+
+Write-Host 'Ищем новые раздачи'
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
+Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
+
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
+     Write-Host 'Отсеиваем раздачи из чёрного списка'
+     $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
+     Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
+    }
 
 if ( $new_torrents_keys) {
     $added = @{}
