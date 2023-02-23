@@ -11,6 +11,10 @@ if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue
     Write-Output 'Не установлен модуль PSIni для чтения настроек Web-TLO, ставим...'
     Install-Module -Name PsIni -Scope CurrentUser -Force
 }
+if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyContinue) ) ) {
+    Write-Output 'Не установлен модуль PSIni для получения данных из базы Web-TLO, ставим...'
+    Install-Module -Name PSSQLite -Scope CurrentUser -Force
+}
 
 $forum = @{}
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
@@ -43,7 +47,7 @@ $forum.UseProxy = $ini_data.proxy.activate_forum
 $forum.Login = $ini_data.'torrent-tracker'.login
 $forum.Password = $ini_data.'torrent-tracker'.password
 
-if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklist = Get-Blacklist }
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'Y' ) { $blacklist = Get-Blacklist }
 
 foreach ( $section in $sections ) {
     If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
