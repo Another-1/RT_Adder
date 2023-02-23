@@ -85,7 +85,7 @@ Write-Host 'Ищем новые раздачи'
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
-if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'Y' ) {
      Write-Host 'Отсеиваем раздачи из чёрного списка'
      $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
      Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
