@@ -12,7 +12,7 @@ if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue
     Install-Module -Name PsIni -Scope CurrentUser -Force
 }
 if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyContinue) ) ) {
-    Write-Output 'Не установлен модуль PSIni для получения данных из базы Web-TLO, ставим...'
+    Write-Output 'Не установлен модуль PSSQLite для получения данных из базы Web-TLO, ставим...'
     Install-Module -Name PSSQLite -Scope CurrentUser -Force
 }
 
