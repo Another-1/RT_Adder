@@ -169,6 +169,8 @@ if ( $new_torrents_keys) {
             Start-Sleep -Milliseconds 100
         }
     }
-    if ( $refreshed -or $added ) { Send-TGReport $refreshed $added $tg_token $tg_chat }
+    if ( $refreshed -or $added ) {
+        Send-TGReport $refreshed $added $tg_token $tg_chat
+        If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report }
+    }
 }
-If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report }
