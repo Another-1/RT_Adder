@@ -81,7 +81,14 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
 
 function Get-TopicIDs ( $client, $torrent_list ) {
     Write-Host 'Ищем ID'
-    $torrent_list | ForEach-Object { $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id }
+    $torrent_list | ForEach-Object {
+        $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id
+        if ( $nul -eq $_.topic_id ) {
+            $Params = @{ hash = $_.hash }
+            $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+            $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
+        }
+    }
 }
 
 function Initialize-Forum () {
@@ -178,12 +185,12 @@ function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
         if ( $deleteFiles -eq $true ) {
             $text = 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' вместе с файлами'
             Write-Host $text
-            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
+            # if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
         }
         else {
             $text = 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' без удаления файлов'
             Write-Host $text
-            if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
+            # if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
         }
         $request_delete = @{
             hashes      = $hash

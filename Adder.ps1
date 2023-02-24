@@ -7,6 +7,9 @@ If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
 
 . "$PSScriptRoot\_functions.ps1"
 
+try { . "$PSScriptRoot\_client_ssd.ps1" }
+catch { }
+
 if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue) ) ) {
     Write-Output 'Не установлен модуль PSIni для чтения настроек Web-TLO, ставим...'
     Install-Module -Name PsIni -Scope CurrentUser -Force
@@ -86,10 +89,10 @@ $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_t
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'Y' ) {
-     Write-Host 'Отсеиваем раздачи из чёрного списка'
-     $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
-     Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
-    }
+    Write-Host 'Отсеиваем раздачи из чёрного списка'
+    $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
+    Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
+}
 
 if ( $new_torrents_keys) {
     $added = @{}
@@ -114,6 +117,18 @@ if ( $new_torrents_keys) {
                 if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
                 $refreshed[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
             }
+# подмена временного каталога если раздача хранится на SSD.
+            if ( $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] ) {
+                $url_get = $client.ip + ':' + $client.Port + '/api/v2/app/preferences'
+                $old_temp_path = ( ( Invoke-WebRequest -Uri $url_get -WebSession $client.sid ).content | ConvertFrom-Json ).temp_path
+                if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
+                    $url_set = $client.ip + ':' + $client.Port + '/api/v2/app/setPreferences'
+                    $param = @{ json = ( @{"temp_path" = ( $existing_torrent.save_path[0] + ':\Incomplete') } | ConvertTo-Json -Compress ) }
+                    Invoke-WebRequest -Uri $url_set -WebSession $client.sid -Body $param -Method POST
+                    Start-Sleep -Seconds 1
+                }
+                else { Remove-Variable -Name old_temp_path -ErrorAction SilentlyContinue }
+            }
             Add-ClientTorrent $client $new_torrent_file $existing_torrent.save_path $existing_torrent.category
 
             While ($true) {
@@ -127,6 +142,10 @@ if ( $new_torrents_keys) {
             }
             else {
                 Remove-ClientTorrent $client $existing_torrent.hash $true
+            }
+            if ( $old_temp_path ) {
+                $param = @{ json = ( @{"temp_path" = $old_temp_path } | ConvertTo-Json -Compress ) }
+                Invoke-WebRequest -Uri $url_set -WebSession $client.sid -Body $param -Method POST
             }
             Start-Sleep -Milliseconds 100
         }
@@ -152,3 +171,4 @@ if ( $new_torrents_keys) {
     }
     if ( $refreshed -or $added ) { Send-TGReport $refreshed $added $tg_token $tg_chat }
 }
+If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report }
