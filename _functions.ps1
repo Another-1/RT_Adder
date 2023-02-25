@@ -209,9 +209,9 @@ function Send-Report {
     if ( !$in_progress ) {
         New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
         Write-Host 'Обновляем БД'
-        . $php_path "$tlo_path\cron\update.php"
+        . $php_path "$tlo_path\php\common\update.php"
         Write-Host 'Шлём отчёт'
-        . $php_path "$tlo_path\cron\reports.php"
+        . $php_path "$tlo_path\php\common\reports.php"
         Remove-Item $lock_file
     }
     else {
