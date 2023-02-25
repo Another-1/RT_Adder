@@ -70,7 +70,9 @@ $clients_torrents = @()
 $clients_tor_sort = @{}
 
 Write-Host 'Получаем из TLO данные о клиентах'
-$ini_data.keys | Where-Object { $_ -match '^torrent-client' } | ForEach-Object { $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; } } 
+$ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
+    $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+} 
 
 foreach ($clientkey in $clients.Keys ) {
     $client = $clients[ $clientkey ]
@@ -117,7 +119,7 @@ if ( $new_torrents_keys) {
                 if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
                 $refreshed[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
             }
-# подмена временного каталога если раздача хранится на SSD.
+            # подмена временного каталога если раздача хранится на SSD.
             if ( $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] ) {
                 $url_get = $client.ip + ':' + $client.Port + '/api/v2/app/preferences'
                 $old_temp_path = ( ( Invoke-WebRequest -Uri $url_get -WebSession $client.sid ).content | ConvertFrom-Json ).temp_path
