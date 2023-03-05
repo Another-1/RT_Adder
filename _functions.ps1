@@ -13,19 +13,19 @@ function Send-TGReport ( $refreshed, $added, $token, $chat_id ) {
     $message = ''
     $first = $true
     foreach ( $key in $refreshed.Keys ) {
-        if ( !$first ) { $message += "`n`n"}
+        if ( !$first ) { $message += "`n`n" }
         $first = $false
         $message += "Обновлены в клиенте $key :"
-        $refreshed[$key] | ForEach-Object { $message += "`n$_"}
+        $refreshed[$key] | ForEach-Object { $message += "`n$_" }
     }
 
     if ( $message -ne '' ) { $message += "`n`n" }
     $first = $true
     foreach ( $key in $added.Keys ) {
-        if ( !$first ) { $message += "`n`n"}
+        if ( !$first ) { $message += "`n`n" }
         $first = $false
         $message += "Добавлены в клиент $key :"
-        $added[$key] | ForEach-Object { $message += "`n$_"}
+        $added[$key] | ForEach-Object { $message += "`n$_" }
     }
     Send-TGMessage $message $token $chat_id
 }
@@ -72,7 +72,7 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
     while ( $true ) {
         try {
             $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | `
-                Select-Object name, hash, save_path, content_path, category, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } } | Where-Object { $_.save_path -match ('^' + $dsk ) }
+                Select-Object name, hash, save_path, content_path, category, state, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } } | Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch { exit }
         return $torrents_list
@@ -82,7 +82,7 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
 function Get-TopicIDs ( $client, $torrent_list ) {
     Write-Host 'Ищем ID'
     $torrent_list | ForEach-Object {
-        $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id
+        if ( $nul -ne $tracker_torrents ) { $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id }
         if ( $nul -eq $_.topic_id ) {
             $Params = @{ hash = $_.hash }
             $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
@@ -124,10 +124,10 @@ function Initialize-Forum () {
     Write-Host ( 'Успешно.' )
 }
 
-function Get-ForumTorrentFile ( [int]$Id ) {
+function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     if ( !$forum.sid ) { Initialize-Forum }
     $forum_url = 'https://rutracker.org/forum/dl.php?t=' + $Id
-    $Path = $PSScriptRoot + '\' + $Id + '_' + $Type + '.torrent'
+    if ( $nul -eq $save_path ) { $Path = $PSScriptRoot + '\' + $Id + '.torrent' } else { $path = $save_path + '\' + $Id + '.torrent' }
     $i = 1
     while ( $true ) {
         try { 
@@ -142,7 +142,7 @@ function Get-ForumTorrentFile ( [int]$Id ) {
         }
         catch { Start-Sleep -Seconds 10; $i++; Write-Host "Попытка номер $i" -ForegroundColor Cyan }
     }
-    return Get-Item $Path
+    if ( $nul -eq $save_path ) { return Get-Item $Path }
 }
 
 function Add-ClientTorrent ( $Client, $File, $Path, $Category, $Skip_checking = $false ) {
@@ -222,6 +222,7 @@ function Send-Report {
 function Get-SectionTorrents ( $forum, $section, $max_seeds) {
     if ( $max_seeds -eq -1 ) { $seed_limit = 999 } else { $seed_limit = $max_seeds }
     $i = 1
+    Write-Host ('Получаем с трекера раздачи раздела ' + $section + '... ' ) -NoNewline
     while ( $true) {
         try {
             if ( [bool]$forum.ProxyURL ) {
@@ -246,7 +247,6 @@ function Get-SectionTorrents ( $forum, $section, $max_seeds) {
         Write-Host 'Не получилось' -ForegroundColor Red
         exit 
     }
-    Write-Host
     return $tmp_torrents
 }
 
@@ -307,14 +307,110 @@ function Get-Separator {
     return $separator
 }
 
+function  Open-Database {
+    $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
+    $conn = New-SqliteConnection -DataSource $database_path
+    return $conn
+}
+
 function Get-Blacklist {
     Write-Host 'Запрашиваем чёрный список из БД Web-TLO'
     $blacklist = @{}
-    $sepa = Get-Separator
-    $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
-    $conn = New-SqliteConnection -DataSource $database_path
+    # $sepa = Get-Separator
+    $conn = Open-Database
     $query = 'SELECT info_hash FROM TopicsExcluded'
     Invoke-SqliteQuery -Query $query -SQLiteConnection $conn | ForEach-Object { $blacklist[$_.info_hash] = 1 }
     $conn.Close()
     return $blacklist
+}
+
+function ConvertFrom-Empty( $from, $to ) {
+    if ( $from -eq '') { return $to }
+    else { return $from }
+}
+
+function Start-Torrents( $hashes, $client) {
+    $Params = @{ hashes = ( $hashes -join '|' ) }
+    $url = $client.ip + ':' + $client.Port + '/api/v2/torrents/resume'
+    Invoke-WebRequest -Method POST -Uri $url -WebSession $client.sid -Form $Params -ContentType 'application/x-bittorrent' | Out-Null
+}
+
+function Stop-Torrents( $hashes, $client) {
+    $Params = @{ hashes = ( $hashes -join '|' ) }
+    $url = $client.ip + ':' + $client.Port + '/api/v2/torrents/pause'
+    Invoke-WebRequest -Method POST -Uri $url -WebSession $client.sid -Form $Params -ContentType 'application/x-bittorrent' | Out-Null
+}
+
+function Select-Client {
+    $clients.keys | ForEach-Object {
+        Write-Host ( $_ + '. ' + $clients[$_].Name )
+    }
+    $ok2 = $false
+    while ( !$ok2 ) {
+        $choice = Read-Host Выберите клиент
+        if (  $clients[ $choice ] ) { $ok2 = $true }
+    }
+    return $clients[$choice]
+}
+
+Function Set-ForumDetails ( $forum ) {
+    If ( ( [bool]$ini_data.proxy.activate_forum -or [bool]$ini_data.proxy.activate_api ) -and ( -not $forceNoProxy ) ) {
+        Write-Host ( 'Используем ' + $ini_data.proxy.type.Replace('socks5h', 'socks5') + ' прокси ' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port )
+        $forum.UseApiProxy = $ini_data.proxy.activate_api
+        $forum.ProxyIP = $ini_data.proxy.hostname
+        $forum.ProxyPort = $ini_data.proxy.port
+        $forum.ProxyURL = 'socks5://' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port
+    }
+    $forum.UseProxy = $ini_data.proxy.activate_forum
+    $forum.Login = $ini_data.'torrent-tracker'.login
+    $forum.Password = $ini_data.'torrent-tracker'.password
+}
+
+function Select-Path ( $direction ) {
+    # $defaultTo = 'Хранимые'
+    if ( $direction -eq 'from' ) {
+        $default = 'Хранимое'
+        $str = "Выберите исходный кусок пути [$default]"
+    }
+    else {
+        $default = 'Хранимые'
+        $str = "Выберите целевой кусок пути [$default]]"
+    } 
+    $choice = Read-Host $str
+    $result = ( $default, $choice)[[bool]$choice]
+    return $result
+}
+
+function Get-String ( $obligatory, $prompt ) { 
+    while ( $true ) {
+        $choice = ( Read-Host $prompt ).ToUpper()
+        if ( $nul -ne $choice -and $choice -ne '') { break }
+        elseif ( !$obligatory ) { break }
+    }
+    if ( $choice ) { return $choice } else { return '' }
+}
+
+function Get-Disk ( $obligatory, $prompt ) { 
+    while ( $true ) {
+        $disk = Get-String $obligatory $prompt
+        if ( ( $disk -and $disk.Length -eq 1 ) -or !$obligatory ) { break } 
+    }
+    return $disk
+}
+
+
+function  Set-Location ( $client, $torrent, $new_path, $verbose = $false) {
+    if ( $verbose ) { Write-Host ( 'Перемещаем ' + $torrent.name ) }
+    $data = @{
+        hashes   = $torrent.hash
+        location = $new_path
+    }
+    Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+}
+
+function Convert-Path ( $client, $path ) {
+    if ( $env:COMPUTERNAME -ne $client_hosts[$client.Name] ) {
+        $path = '\\' + $client_hosts[$client.Name] + '\' + $path.replace( ':', '')
+    }
+    return $path
 }

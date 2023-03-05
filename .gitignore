@@ -1,2 +1,5 @@
 _settings.ps1
 _client_ssd.ps1
+controller.ps1
+Manager.ps1
+test.ps1

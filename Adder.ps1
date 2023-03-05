@@ -4,7 +4,7 @@ If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
     Pause
     Exit
 }
-
+Write-Host 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
 
 try { . "$PSScriptRoot\_client_ssd.ps1" }
@@ -19,7 +19,6 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
     Install-Module -Name PSSQLite -Scope CurrentUser -Force
 }
 
-$forum = @{}
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
     # . "$PSScriptRoot\_setuper.ps1"
     Set-Preferences
@@ -27,7 +26,7 @@ If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
 else { . "$PSScriptRoot\_settings.ps1" }
 
 Write-Output 'Читаем настройки Web-TLO'
-$forceNoProxy = $false
+# $forceNoProxy = $false
 
 $ini_path = $tlo_path + '\data\config.ini'
 $ini_data = Get-IniContent $ini_path
@@ -36,29 +35,22 @@ $sections = $ini_data.sections.subsections.split( ',' )
 
 Write-Host 'Достаём из TLO данные о разделах'
 $section_details = @{}
-$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder', $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics', $ini_data[ $_ ].'label' ) }
+$ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object { $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder', $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics', $ini_data[ $_ ].'label', $ini_data[$_].'control-peers' ) }
 $tracker_torrents = @{}
 
-If ( ( [bool]$ini_data.proxy.activate_forum -or [bool]$ini_data.proxy.activate_api ) -and ( -not $forceNoProxy ) ) {
-    Write-Host ( 'Используем ' + $ini_data.proxy.type.Replace('socks5h', 'socks5') + ' прокси ' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port )
-    $forum.UseApiProxy = $ini_data.proxy.activate_api
-    $forum.ProxyIP = $ini_data.proxy.hostname
-    $forum.ProxyPort = $ini_data.proxy.port
-    $forum.ProxyURL = 'socks5://' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port
-}
-$forum.UseProxy = $ini_data.proxy.activate_forum
-$forum.Login = $ini_data.'torrent-tracker'.login
-$forum.Password = $ini_data.'torrent-tracker'.password
+$forum = @{}
+Set-ForumDetails $forum
 
+# подтягиваем чёрный список если нужно.
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'Y' ) { $blacklist = Get-Blacklist }
 
 foreach ( $section in $sections ) {
+# пропускаем скрытые разделы, если указано их пропускать.
     If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
         Write-Host ('Пропускаем скрытый раздел ' + $section )
         Write-Host ''
         continue
     }
-    Write-Host ('Получаем с трекера раздачи раздела ' + $section )
     $section_torrents = Get-SectionTorrents $forum $section $max_seeds
     $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10 ) } | ForEach-Object {
         $tracker_torrents[$section_torrents[$_][7]] = @{ id = $_; section = $section.ToInt32($nul); status = $section_torrents[$_][0]; name = $nul; reg_time = $section_torrents[$_][2]; size = $section_torrents[$_][3]; seeders = $section_torrents[$_][1] }
@@ -175,4 +167,8 @@ if ( $new_torrents_keys) {
         Send-TGReport $refreshed $added $tg_token $tg_chat
         If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report }
     }
+} # по наличию новых раздач.
+
+if ( $control -eq 'Y' ) {
+    . "$PSScriptRoot\controller.ps1"
 }
