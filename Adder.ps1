@@ -48,7 +48,6 @@ foreach ( $section in $sections ) {
 # пропускаем скрытые разделы, если указано их пропускать.
     If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
         Write-Host ('Пропускаем скрытый раздел ' + $section )
-        Write-Host ''
         continue
     }
     $section_torrents = Get-SectionTorrents $forum $section $max_seeds
@@ -165,7 +164,7 @@ if ( $new_torrents_keys) {
     }
     if ( $refreshed -or $added ) {
         Send-TGReport $refreshed $added $tg_token $tg_chat
-        If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report }
+        If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report $true }
     }
 } # по наличию новых раздач.
 

@@ -203,10 +203,14 @@ function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
     }
 }
 
-function Send-Report {
+function Send-Report ( $wait = $false ) {
     $lock_file = "$PSScriptRoot\in_progress.lck"
     $in_progress = Test-Path -Path $lock_file
     if ( !$in_progress ) {
+        if ( $wait ) {
+            Write-Host 'Подождём 5 минут, вдруг быстро скачается.'
+            Start-Sleep -Seconds 300
+        }
         New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
         Write-Host 'Обновляем БД'
         . $php_path "$tlo_path\php\common\update.php"
@@ -374,10 +378,10 @@ function Select-Path ( $direction ) {
     }
     else {
         $default = 'Хранимые'
-        $str = "Выберите целевой кусок пути [$default]]"
+        $str = "Выберите целевой кусок пути [$default]"
     } 
     $choice = Read-Host $str
-    $result = ( $default, $choice)[[bool]$choice]
+    $result = ( $default, $choice )[[bool]$choice]
     return $result
 }
 
@@ -405,7 +409,14 @@ function  Set-Location ( $client, $torrent, $new_path, $verbose = $false) {
         hashes   = $torrent.hash
         location = $new_path
     }
-    Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    try {
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+    catch {
+        $client.sid = $null
+        Initialize-Client $client
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
 }
 
 function Convert-Path ( $client, $path ) {
