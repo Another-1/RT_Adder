@@ -17,7 +17,10 @@ $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].c
 $client = Select-Client
 Write-host ( 'Выбран клиент ' + $client.Name )
 $path_from = Select-Path 'from'
+$separator = Get-Separator
+if ( $path_from -notmatch "\${separator}$") { $path_from = "$path_from$separator"}
 $path_to = Select-Path 'to'
+if ( $path_to -notmatch "\${separator}$") { $path_to = "$path_to$separator"}
 $category = Get-String $false 'Укажите категорию (при необходимости)'
 Initialize-Client $client
 if ( $client.sid ) {
