@@ -42,10 +42,10 @@ $forum = @{}
 Set-ForumDetails $forum
 
 # подтягиваем чёрный список если нужно.
-if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'Y' ) { $blacklist = Get-Blacklist }
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklist = Get-Blacklist }
 
 foreach ( $section in $sections ) {
-# пропускаем скрытые разделы, если указано их пропускать.
+    # пропускаем скрытые разделы, если указано их пропускать.
     If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
         Write-Host ('Пропускаем скрытый раздел ' + $section )
         continue
@@ -81,16 +81,19 @@ Write-Host 'Ищем новые раздачи'
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
-if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'Y' ) {
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     Write-Host 'Отсеиваем раздачи из чёрного списка'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
     Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
+Remove-Variable -Name added -ErrorAction SilentlyContinue
+Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
+$refreshed_ids = @()
 if ( $new_torrents_keys) {
     $added = @{}
     $refreshed = @{}
-    $ProgressPreference = 'SilentlyContinue'
+        $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
         $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
@@ -109,6 +112,7 @@ if ( $new_torrents_keys) {
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
                 $refreshed[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                $refreshed_ids += $new_tracker_data.id
             }
             # подмена временного каталога если раздача хранится на SSD.
             if ( $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] ) {
@@ -162,11 +166,24 @@ if ( $new_torrents_keys) {
             Start-Sleep -Milliseconds 100
         }
     }
-    if ( $refreshed -or $added ) {
-        Send-TGReport $refreshed $added $tg_token $tg_chat
-        If ( $send_reports -eq 'Y' -and $php_path ) { Send-Report $true }
-    }
 } # по наличию новых раздач.
+
+Remove-Variable -Name obsolete -ErrorAction SilentlyContinue
+if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
+    $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_]} 
+    $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys }
+    $obsolete_torrents | ForEach-Object {
+        If ( !$obsolete ) { $obsolete = @{} }
+        Write-Host ( "Левая раздача " + $_.topic_id + ' в клиенте ' + $clients[$_.client_key].Name )
+        if ( !$obsolete[$clients[$_.client_key].Name] ) { $obsolete[ $clients[$_.client_key].Name] = @() }
+        $obsolete[$clients[$_.client_key].Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $_.topic_id )
+    }
+}
+
+if ( $refreshed -or $added -or $obsolete ) {
+    Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
+    If ( $send_reports -eq 'Y' -and $php_path -and ( $refreshed -or $added ) ) { Send-Report $true }
+}
 
 if ( $control -eq 'Y' ) {
     . "$PSScriptRoot\controller.ps1"

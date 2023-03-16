@@ -9,7 +9,7 @@ function Send-TGMessage ( $message, $token, $chat_id ) {
     Invoke-WebRequest -Uri ("https://api.telegram.org/bot{0}/sendMessage" -f $token) -Method Post  -ContentType "application/json;charset=utf-8" -Body (ConvertTo-Json -Compress -InputObject $payload) | Out-Null
 }
 
-function Send-TGReport ( $refreshed, $added, $token, $chat_id ) {
+function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
     $message = ''
     $first = $true
     foreach ( $key in $refreshed.Keys ) {
@@ -27,6 +27,16 @@ function Send-TGReport ( $refreshed, $added, $token, $chat_id ) {
         $message += "Добавлены в клиент $key :"
         $added[$key] | ForEach-Object { $message += "`n$_" }
     }
+
+    if ( $message -ne '' ) { $message += "`n`n" }
+    $first = $true
+    foreach ( $key in $obsolete.Keys ) {
+        if ( !$first ) { $message += "`n`n" }
+        $first = $false
+        $message += "Лишние в клиенте $key :"
+        $obsolete[$key] | ForEach-Object { $message += "`n$_" }
+    }
+
     Send-TGMessage $message $token $chat_id
 }
 
@@ -312,6 +322,7 @@ function Get-Separator {
 }
 
 function  Open-Database {
+    $sepa = Get-Separator
     $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
     $conn = New-SqliteConnection -DataSource $database_path
     return $conn
