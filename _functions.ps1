@@ -96,6 +96,7 @@ function Get-TopicIDs ( $client, $torrent_list ) {
         if ( $nul -eq $_.topic_id ) {
             $Params = @{ hash = $_.hash }
             $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+            Start-Sleep -Milliseconds 10
             $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
         }
     }
@@ -324,6 +325,7 @@ function Get-Separator {
 function  Open-Database {
     $sepa = Get-Separator
     $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
+    Write-Host 'Путь к базе данных: ' $database_path
     $conn = New-SqliteConnection -DataSource $database_path
     return $conn
 }
@@ -398,7 +400,7 @@ function Select-Path ( $direction ) {
 
 function Get-String ( $obligatory, $prompt ) { 
     while ( $true ) {
-        $choice = ( Read-Host $prompt ).ToUpper()
+        $choice = ( Read-Host $prompt )
         if ( $nul -ne $choice -and $choice -ne '') { break }
         elseif ( !$obligatory ) { break }
     }
@@ -408,7 +410,9 @@ function Get-String ( $obligatory, $prompt ) {
 function Get-Disk ( $obligatory, $prompt ) { 
     while ( $true ) {
         $disk = Get-String $obligatory $prompt
-        if ( ( $disk -and $disk.Length -eq 1 ) -or !$obligatory ) { break } 
+        if ( ( $disk -and $disk.Length -eq 1 ) -or !$obligatory ) { 
+            $disk = $disk.ToUpper()
+            break } 
     }
     return $disk
 }

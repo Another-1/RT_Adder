@@ -46,13 +46,22 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklis
 
 foreach ( $section in $sections ) {
     # пропускаем скрытые разделы, если указано их пропускать.
-    If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
-        Write-Host ('Пропускаем скрытый раздел ' + $section )
-        continue
-    }
+    # If ( $section_details[$section.toInt32($nul)][3] -eq 1 -and $get_hidden -eq 'N') {
+    #     Write-Host ('Пропускаем скрытый раздел ' + $section )
+    #     continue
+    # }
     $section_torrents = Get-SectionTorrents $forum $section $max_seeds
     $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10 ) } | ForEach-Object {
-        $tracker_torrents[$section_torrents[$_][7]] = @{ id = $_; section = $section.ToInt32($nul); status = $section_torrents[$_][0]; name = $nul; reg_time = $section_torrents[$_][2]; size = $section_torrents[$_][3]; seeders = $section_torrents[$_][1] }
+        $tracker_torrents[$section_torrents[$_][7]] = @{
+            id             = $_
+            section        = $section.ToInt32($nul)
+            status         = $section_torrents[$_][0]
+            name           = $nul
+            reg_time       = $section_torrents[$_][2]
+            size           = $section_torrents[$_][3]
+            seeders        = $section_torrents[$_][1]
+            hidden_section = $section_details[$section.toInt32($nul)][3]
+        }
     }
 }
 
@@ -78,7 +87,10 @@ $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
 }
 
 Write-Host 'Ищем новые раздачи'
-$new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
+if (!$min_days ) { $min_days = 0 }
+$new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0'} | `
+    Where-Object { ( $tracker_torrents[$_].reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -or $tracker_torrents[$_].status -eq 2 ) }
+
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
@@ -90,10 +102,11 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
 Remove-Variable -Name added -ErrorAction SilentlyContinue
 Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
 $refreshed_ids = @()
-if ( $new_torrents_keys) {
+# if ( $new_torrents_keys -and 1 -eq 0 ) {
+if ( $new_torrents_keys ) {
     $added = @{}
     $refreshed = @{}
-        $ProgressPreference = 'SilentlyContinue'
+    $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
         $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
@@ -163,14 +176,14 @@ if ( $new_torrents_keys) {
                 $save_path = ( $save_path -replace ( '\\$', '')) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
-            Start-Sleep -Milliseconds 100
+            # Start-Sleep -Milliseconds 100
         }
     }
 } # по наличию новых раздач.
 
 Remove-Variable -Name obsolete -ErrorAction SilentlyContinue
-if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
-    $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_]} 
+if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report_obsolete -eq 'Y' ) {
+    $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_] } 
     $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys }
     $obsolete_torrents | ForEach-Object {
         If ( !$obsolete ) { $obsolete = @{} }
@@ -180,11 +193,23 @@ if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
     }
 }
 
+# Очистим ненужные данные из памяти.
+Remove-Variable -Name clients_tor_sort -ErrorAction SilentlyContinue
+
 if ( $refreshed -or $added -or $obsolete ) {
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
     If ( $send_reports -eq 'Y' -and $php_path -and ( $refreshed -or $added ) ) { Send-Report $true }
 }
 
+Remove-Variable -Name added -ErrorAction SilentlyContinue
+Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
+
 if ( $control -eq 'Y' ) {
+    if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '28'..'52' ) {
+        Write-Host 'Подождём окончания профилактических работ на сервере'
+        while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '28'..'52' ) {
+            Start-Sleep -Seconds 60
+        }
+    }
     . "$PSScriptRoot\controller.ps1"
 }
