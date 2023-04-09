@@ -325,7 +325,7 @@ function Get-Separator {
 function  Open-Database {
     $sepa = Get-Separator
     $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
-    Write-Host 'Путь к базе данных: ' $database_path
+    Write-Host 'Путь к базе данных:' $database_path
     $conn = New-SqliteConnection -DataSource $database_path
     return $conn
 }

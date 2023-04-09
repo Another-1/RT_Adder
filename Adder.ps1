@@ -51,7 +51,7 @@ foreach ( $section in $sections ) {
     #     continue
     # }
     $section_torrents = Get-SectionTorrents $forum $section $max_seeds
-    $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10 ) } | ForEach-Object {
+    $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10, 11 ) } | ForEach-Object {
         $tracker_torrents[$section_torrents[$_][7]] = @{
             id             = $_
             section        = $section.ToInt32($nul)
@@ -183,7 +183,8 @@ if ( $new_torrents_keys ) {
 
 Remove-Variable -Name obsolete -ErrorAction SilentlyContinue
 if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report_obsolete -eq 'Y' ) {
-    $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_] } 
+    $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_] } | `
+        Where-Object { $tracker_torrents.Values.id -notcontains $clients_tor_sort[$_]}
     $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys }
     $obsolete_torrents | ForEach-Object {
         If ( !$obsolete ) { $obsolete = @{} }
