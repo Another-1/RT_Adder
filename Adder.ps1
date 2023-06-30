@@ -107,8 +107,6 @@ if ( $clients_torrents.count -eq 0 ) {
 }
 Write-Host 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
-# $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0'} | `
-#     Where-Object { ( $tracker_torrents[$_].reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -or $tracker_torrents[$_].status -eq 2 ) }
 
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
 
@@ -123,7 +121,6 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
 Remove-Variable -Name added -ErrorAction SilentlyContinue
 Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
 $refreshed_ids = @()
-# if ( $new_torrents_keys -and 1 -eq 0 ) {
 $added = @{}
 $refreshed = @{}
 if ( $new_torrents_keys ) {
@@ -187,7 +184,6 @@ if ( $new_torrents_keys ) {
             }
             Start-Sleep -Milliseconds 100
         }
-        # elseif ( !$existing_torrent -and ( ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -and ( $new_tracker_data.status -eq 0 -or $new_tracker_data.status -eq 8 ) ) -or $new_tracker_data.status -eq 2 )) {
         elseif ( !$existing_torrent -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
@@ -205,9 +201,7 @@ if ( $new_torrents_keys ) {
                 $save_path = ( $save_path -replace ( '\\$', '')) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
-            # Start-Sleep -Milliseconds 100
         }
-        # elseif ( $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -and ( $new_tracker_data.status -eq 0 -or $new_tracker_data.status -eq 8 ) ) {
         elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) {
             Write-Host 'Раздача' $new_tracker_data.id 'слишком новая.'
         }
