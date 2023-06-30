@@ -153,7 +153,7 @@ if ( $new_torrents_keys ) {
                 $refreshed_ids += $new_tracker_data.id
             }
             # подмена временного каталога если раздача хранится на SSD.
-            if ( $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] ) {
+            if ( $nul -ne $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] ) {
                 $url_get = $client.ip + ':' + $client.Port + '/api/v2/app/preferences'
                 $old_temp_path = ( ( Invoke-WebRequest -Uri $url_get -WebSession $client.sid ).content | ConvertFrom-Json ).temp_path
                 if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
