@@ -95,7 +95,12 @@ function Get-TopicIDs ( $client, $torrent_list ) {
         if ( $nul -ne $tracker_torrents ) { $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id }
         if ( $nul -eq $_.topic_id ) {
             $Params = @{ hash = $_.hash }
-            $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+            try {
+                $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+            }
+            catch {
+                pause
+            }
             Start-Sleep -Milliseconds 10
             $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
         }
@@ -118,7 +123,7 @@ function Initialize-Forum () {
     while ($true) {
         try {
             if ( [bool]$forum.ProxyURL ) {
-                Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL | Out-Null
+                Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL -ProxyCredential $proxyCred | Out-Null
             }
             else { Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck | Out-Null }
             break
@@ -138,12 +143,12 @@ function Initialize-Forum () {
 function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     if ( !$forum.sid ) { Initialize-Forum }
     $forum_url = 'https://rutracker.org/forum/dl.php?t=' + $Id
-    if ( $nul -eq $save_path ) { $Path = $PSScriptRoot + '\' + $Id + '.torrent' } else { $path = $save_path + '\' + $Id + '.torrent' }
+    if ( $null -eq $save_path ) { $Path = $PSScriptRoot + '\' + $Id + '.torrent' } else { $path = $save_path + '\' + $Id + '.torrent' }
     $i = 1
     while ( $true ) {
         try { 
             if ( [bool]$forum.ProxyURL ) {
-                Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
+                Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck  -ProxyCredential $proxyCred 
                 break
             }
             else {
@@ -223,11 +228,15 @@ function Send-Report ( $wait = $false ) {
             Start-Sleep -Seconds 300
         }
         New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
-        Write-Host 'Обновляем БД'
-        . $php_path "$tlo_path\php\common\update.php"
-        Write-Host 'Шлём отчёт'
-        . $php_path "$tlo_path\php\common\reports.php"
-        Remove-Item $lock_file
+        try {
+            Write-Host 'Обновляем БД'
+            . $php_path "$tlo_path\php\common\update.php"
+            Write-Host 'Шлём отчёт'
+            . $php_path "$tlo_path\php\common\reports.php"
+        }
+        finally {
+            Remove-Item $lock_file -ErrorAction SilentlyContinue
+        }
     }
     else {
         Write-Host "Обнаружен файл блокировки $lock_file. Вероятно, запущен параллельный процесс. Если это не так, удалите файл" -ForegroundColor Red
@@ -240,8 +249,8 @@ function Get-SectionTorrents ( $forum, $section, $max_seeds) {
     Write-Host ('Получаем с трекера раздачи раздела ' + $section + '... ' ) -NoNewline
     while ( $true) {
         try {
-            if ( [bool]$forum.ProxyURL ) {
-                $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL ).Content | ConvertFrom-Json -AsHashtable ).result
+            if ( [bool]$forum.ProxyURL -and $forum.UseApiProxy -eq 1 ) {
+                $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL -ProxyCredential $proxyCred ).Content | ConvertFrom-Json -AsHashtable ).result
             }
             else {
                 $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" ).Content | ConvertFrom-Json -AsHashtable ).result
@@ -271,6 +280,7 @@ function Set-Preferences {
     $max_seeds = -1
     $get_hidden = 'N'
     $get_blacklist = 'N'
+    $get_news = 'N'
     Clear-Host
     Write-Host 'Не обнаружено настроек' -ForegroundColor Red
     Write-Host 'Вот и создадим их.' -ForegroundColor Green
@@ -307,6 +317,14 @@ function Set-Preferences {
         Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
+    while ( $true ) {
+        If ( ( $prompt = Read-host -Prompt "Новые раздачи? (Y/N) [$get_news]" ) -ne '' ) {
+            $get_news = $prompt.ToUpper() 
+        }
+        If ( $get_news -match '^[Y|N]$' ) { break }
+        Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
+    }
+
     if ( ( $prompt = Read-host -Prompt "Токен бота Telegram, если нужна отправка событий в Telegram. Если не нужно, оставить пустым" ) -ne '' ) {
         $tg_token = $prompt
         if ( ( $prompt = Read-host -Prompt "Номер чата для отправки сообщений Telegram" ) -ne '' ) {
@@ -314,7 +332,7 @@ function Set-Preferences {
         }
     }
     
-    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
 }
 
 function Get-Separator {
@@ -377,6 +395,8 @@ Function Set-ForumDetails ( $forum ) {
         $forum.ProxyIP = $ini_data.proxy.hostname
         $forum.ProxyPort = $ini_data.proxy.port
         $forum.ProxyURL = 'socks5://' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port
+        $forum.ProxyLogin = $ini_data.proxy.login
+        $forum.ProxyPassword = $ini_data.proxy.password
     }
     $forum.UseProxy = $ini_data.proxy.activate_forum
     $forum.Login = $ini_data.'torrent-tracker'.login
@@ -412,7 +432,8 @@ function Get-Disk ( $obligatory, $prompt ) {
         $disk = Get-String $obligatory $prompt
         if ( ( $disk -and $disk.Length -eq 1 ) -or !$obligatory ) { 
             $disk = $disk.ToUpper()
-            break } 
+            break 
+        } 
     }
     return $disk
 }

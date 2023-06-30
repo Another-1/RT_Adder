@@ -5,3 +5,4 @@ Manager.ps1
 test.ps1
 in_progress.lck
 *.torrent
+Aligner.ps1
