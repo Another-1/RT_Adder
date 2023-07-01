@@ -49,7 +49,7 @@ if ( $nul -eq $tracker_torrents ) { $tracker_torrents = @{} }
 $forum = @{}
 Set-ForumDetails $forum
 
-if ( $forum.ProxyURL ) {
+if ( $forum.ProxyURL -and $proxyPass -and $proxyPass -ne '') {
     $proxyPass = ConvertTo-SecureString $ini_data.proxy.password -AsPlainText -Force
     $proxyCred = New-Object System.Management.Automation.PSCredential -ArgumentList $forum.ProxyLogin, $proxyPass
 }
@@ -94,6 +94,7 @@ if ( $clients_torrents.count -eq 0 ) {
         $clients_torrents += $client_torrents
     }
 
+    Write-Host 'Сортируем таблицы'
     $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
         $clients_tor_sort[$_.hash] = $_.topic_id
         $clients_tor_srt2[$_.topic_id] = @{

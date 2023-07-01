@@ -123,7 +123,12 @@ function Initialize-Forum () {
     while ($true) {
         try {
             if ( [bool]$forum.ProxyURL ) {
-                Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL -ProxyCredential $proxyCred | Out-Null
+                if ( $proxycred ) {
+                    Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL -ProxyCredential $proxyCred | Out-Null
+                }
+                else {
+                    Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL | Out-Null
+                }
             }
             else { Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck | Out-Null }
             break
@@ -148,7 +153,12 @@ function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     while ( $true ) {
         try { 
             if ( [bool]$forum.ProxyURL ) {
-                Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck  -ProxyCredential $proxyCred 
+                if ( $proxycred ) {
+                    Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -ProxyCredential $proxyCred
+                }
+                else {
+                    Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
+                }
                 break
             }
             else {
@@ -184,7 +194,12 @@ function Get-ForumName( $section ) {
     while ($true) {
         try {
             if ( [bool]$forum.UseApiProxy ) {
-                $ForumName = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/get_forum_data?by=forum_id&val=$section" -Proxy $forum.ProxyURL ).content | ConvertFrom-Json -AsHashtable ).result[$section].forum_name
+                if ( $proxyCred ) {
+                    $ForumName = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/get_forum_data?by=forum_id&val=$section" -Proxy $forum.ProxyURL -ProxyCredential $proxyCred ).content | ConvertFrom-Json -AsHashtable ).result[$section].forum_name
+                }
+                else {
+                    $ForumName = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/get_forum_data?by=forum_id&val=$section" -Proxy $forum.ProxyURL ).content | ConvertFrom-Json -AsHashtable ).result[$section].forum_name
+                }
             }
             else {
                 $ForumName = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/get_forum_data?by=forum_id&val=$section" ).content | ConvertFrom-Json -AsHashtable ).result[$section].forum_name
@@ -250,7 +265,12 @@ function Get-SectionTorrents ( $forum, $section, $max_seeds) {
     while ( $true) {
         try {
             if ( [bool]$forum.ProxyURL -and $forum.UseApiProxy -eq 1 ) {
+                if ( $proxyCred ) {
                 $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL -ProxyCredential $proxyCred ).Content | ConvertFrom-Json -AsHashtable ).result
+                }
+                else {
+                    $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL ).Content | ConvertFrom-Json -AsHashtable ).result
+                }
             }
             else {
                 $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" ).Content | ConvertFrom-Json -AsHashtable ).result
