@@ -49,7 +49,7 @@ if ( $nul -eq $tracker_torrents ) { $tracker_torrents = @{} }
 $forum = @{}
 Set-ForumDetails $forum
 
-if ( $forum.ProxyURL -and $proxyPass -and $proxyPass -ne '') {
+if ( $forum.ProxyURL -and $forum.ProxyPassword -and $forum.ProxyPassword -ne '') {
     $proxyPass = ConvertTo-SecureString $ini_data.proxy.password -AsPlainText -Force
     $proxyCred = New-Object System.Management.Automation.PSCredential -ArgumentList $forum.ProxyLogin, $proxyPass
 }
