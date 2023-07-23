@@ -304,7 +304,7 @@ function Set-Preferences {
     Clear-Host
     Write-Host 'Не обнаружено настроек' -ForegroundColor Red
     Write-Host 'Вот и создадим их.' -ForegroundColor Green
-    Write-Host 'Для получения информации о коиентах и хранимых разделах мне нужен путь к каталогу Web-TLO'
+    Write-Host 'Для получения информации о клиентах и хранимых разделах мне нужен путь к каталогу Web-TLO'
     Write-Host 'Если путь верный, можно просто нажать Enter. Если нет - укажите верный'
     while ( $true ) {
         If ( ( $prompt = Read-Host -Prompt "Путь к папке Web-TLO [$tlo_path]" ) -ne '' ) {

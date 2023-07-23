@@ -230,7 +230,7 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
 If ( $send_reports -eq 'Y' -and $php_path -and ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) ) {
-    Send-Report $true
+    Send-Report $true # с паузой.
 }
 
 Remove-Variable -Name added -ErrorAction SilentlyContinue
