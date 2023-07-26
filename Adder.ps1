@@ -69,6 +69,7 @@ if ( $tracker_torrents.count -eq 0 ) {
                 size           = $section_torrents[$_][3]
                 seeders        = $section_torrents[$_][1]
                 hidden_section = $section_details[$section.toInt32($nul)][3]
+                releaser      = $section_torrents[$_][8]
             }
         }
     }
@@ -185,7 +186,7 @@ if ( $new_torrents_keys ) {
             }
             Start-Sleep -Milliseconds 100
         }
-        elseif ( !$existing_torrent -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) {
+        elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) -or $new_tracker_data.releaser -in $priority_releasers ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
@@ -203,9 +204,10 @@ if ( $new_torrents_keys ) {
             }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
         }
-        elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) {
+        elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -and $new_tracker_data.releaser -notin $priority_releasers ) ) {
             Write-Host 'Раздача' $new_tracker_data.id 'слишком новая.'
         }
+        else { Pause }
     }
 } # по наличию новых раздач.
 
