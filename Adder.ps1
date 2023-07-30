@@ -30,11 +30,17 @@ Write-Output 'Читаем настройки Web-TLO'
 $ini_path = $tlo_path + '\data\config.ini'
 $ini_data = Get-IniContent $ini_path
 
+# if ( !$forced_sections ) {
 $sections = $ini_data.sections.subsections.split( ',' )
+if ( $forced_sections ) {
+    $forced_sections = $forced_sections.Replace(' ', '')
+    $forced_sections_hash = @()
+    $forced_sections.split() | ForEach-Object { $forced_sections_hash += $_ }
+}    
 
 if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
     Write-Host 'Подождём окончания профилактических работ на сервере'
-    while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '28'..'52' ) {
+    while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
         Start-Sleep -Seconds 60
     }
 }
@@ -44,7 +50,7 @@ $section_details = @{}
 $ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object {
     $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder', $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics', $ini_data[ $_ ].'label', $ini_data[$_].'control-peers' )
 }
-if ( $nul -eq $tracker_torrents ) { $tracker_torrents = @{} }
+if ( ( $nul -eq $tracker_torrents ) -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) { $tracker_torrents = @{} }
 
 $forum = @{}
 Set-ForumDetails $forum
@@ -69,13 +75,13 @@ if ( $tracker_torrents.count -eq 0 ) {
                 size           = $section_torrents[$_][3]
                 seeders        = $section_torrents[$_][1]
                 hidden_section = $section_details[$section.toInt32($nul)][3]
-                releaser      = $section_torrents[$_][8]
+                releaser       = $section_torrents[$_][8]
             }
         }
     }
 }
 $clients = @{}
-if ( $nul -eq $clients_tor_sort ) {
+if ( $nul -eq $clients_tor_sort -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) {
     $clients_torrents = @()
     $clients_tor_sort = @{}
     $clients_tor_srt2 = @{}
@@ -110,7 +116,12 @@ if ( $clients_torrents.count -eq 0 ) {
 Write-Host 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
 
-$new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
+if ( $forced_sections_hash ) {
+    $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } | Where-Object { $tracker_torrents[$_].section -in $forced_sections_hash }
+}
+else {
+    $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
+}
 
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
