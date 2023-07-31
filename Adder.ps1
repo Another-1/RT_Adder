@@ -33,10 +33,11 @@ $ini_data = Get-IniContent $ini_path
 # if ( !$forced_sections ) {
 $sections = $ini_data.sections.subsections.split( ',' )
 if ( $forced_sections ) {
+    Write-Host 'Анализируем forced_sections'
     $forced_sections = $forced_sections.Replace(' ', '')
     $forced_sections_hash = @()
-    $forced_sections.split() | ForEach-Object { $forced_sections_hash += $_ }
-}    
+    $forced_sections.split(',') | ForEach-Object { $forced_sections_hash += $_ }
+}
 
 if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
     Write-Host 'Подождём окончания профилактических работ на сервере'
@@ -116,12 +117,7 @@ if ( $clients_torrents.count -eq 0 ) {
 Write-Host 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
 
-if ( $forced_sections_hash ) {
-    $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } | Where-Object { $tracker_torrents[$_].section -in $forced_sections_hash }
-}
-else {
     $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
-}
 
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
@@ -129,6 +125,11 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     Write-Host 'Отсеиваем раздачи из чёрного списка'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
     Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
+}
+
+if ( $forced_sections_hash ) {
+    Write-Host 'Применяем forced_sections'
+    $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].section.ToString() -in $forced_sections_hash }
 }
 
 Remove-Variable -Name added -ErrorAction SilentlyContinue
