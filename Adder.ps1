@@ -130,6 +130,7 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
 if ( $forced_sections_hash ) {
     Write-Host 'Применяем forced_sections'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].section.ToString() -in $forced_sections_hash }
+    Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
 Remove-Variable -Name added -ErrorAction SilentlyContinue
