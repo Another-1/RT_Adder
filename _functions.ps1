@@ -338,7 +338,7 @@ function Set-Preferences {
     }
 
     while ( $true ) {
-        If ( ( $prompt = Read-host -Prompt "Новые раздачи? (Y/N) [$get_news]" ) -ne '' ) {
+        If ( ( $prompt = Read-host -Prompt "Скачивать новые раздачи? (Y/N) [$get_news]" ) -ne '' ) {
             $get_news = $prompt.ToUpper() 
         }
         If ( $get_news -match '^[Y|N]$' ) { break }
