@@ -117,7 +117,7 @@ if ( $clients_torrents.count -eq 0 ) {
 Write-Host 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
 
-    $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
+$new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
 
 Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
 
@@ -147,11 +147,15 @@ if ( $new_torrents_keys ) {
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
             $client = $clients[$existing_torrent.client_key]
+            Write-Host ( "Раздача " + $new_tracker_data.id + ' уже есть в клиенте ' + $client.Name )
         }
         else {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
             if (!$client) {
                 $client = $clients[$section_details[$new_tracker_data.section][0].ToString()]
+                If ( $get_news -eq 'Y') {
+                    Write-Host ( "Для раздачи " + $new_tracker_data.id + ' выбран клиент ' + $client.Name )
+                }
             }
         }
         if ( $existing_torrent ) {
@@ -220,9 +224,10 @@ if ( $new_torrents_keys ) {
         elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -and $new_tracker_data.releaser -notin $priority_releasers ) ) {
             Write-Host 'Раздача' $new_tracker_data.id 'слишком новая.'
         }
-        else { 
-            Write-Host ( 'Не могу решить, что делать с раздачей ' + $new_tracker_data.id )
-         }
+        elseif ( $get_news -eq 'N') {
+            # раздача новая, но выбрано не добавлять новые. Значит ничего и не делаем.
+        }
+        else {break}
     }
 } # по наличию новых раздач.
 
