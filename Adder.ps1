@@ -220,7 +220,9 @@ if ( $new_torrents_keys ) {
         elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) -and $new_tracker_data.releaser -notin $priority_releasers ) ) {
             Write-Host 'Раздача' $new_tracker_data.id 'слишком новая.'
         }
-        else { Pause }
+        else { 
+            Write-Host ( 'Не могу решить, что делать с раздачей ' + $new_tracker_data.id )
+         }
     }
 } # по наличию новых раздач.
 
