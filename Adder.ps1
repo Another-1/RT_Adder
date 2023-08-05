@@ -227,7 +227,10 @@ if ( $new_torrents_keys ) {
         elseif ( $get_news -eq 'N') {
             # раздача новая, но выбрано не добавлять новые. Значит ничего и не делаем.
         }
-        else {break}
+        else {
+            Write-Output 'Случилось что-то странное, лучше остановимся' -ForegroundColor Red
+            break
+        }
     }
 } # по наличию новых раздач.
 
