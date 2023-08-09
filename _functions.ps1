@@ -82,7 +82,7 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
     while ( $true ) {
         try {
             $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | `
-                Select-Object name, hash, save_path, content_path, category, state, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } } | Where-Object { $_.save_path -match ('^' + $dsk ) }
+                Select-Object name, hash, save_path, content_path, category, state, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1 | Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch { exit }
         return $torrents_list

@@ -35,8 +35,8 @@ $sections = $ini_data.sections.subsections.split( ',' )
 if ( $forced_sections ) {
     Write-Host 'Анализируем forced_sections'
     $forced_sections = $forced_sections.Replace(' ', '')
-    $forced_sections_hash = @()
-    $forced_sections.split(',') | ForEach-Object { $forced_sections_hash += $_ }
+    $forced_sections_array = @()
+    $forced_sections.split(',') | ForEach-Object { $forced_sections_array += $_ }
 }
 
 if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
@@ -104,13 +104,14 @@ if ( $clients_torrents.count -eq 0 ) {
 
     Write-Host 'Сортируем таблицы'
     $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
-        $clients_tor_sort[$_.hash] = $_.topic_id
+        $clients_tor_sort[$_.infohash_v1] = $_.topic_id
+
         $clients_tor_srt2[$_.topic_id] = @{
-            client_key = $_.client_key
-            save_path  = $_.save_path
-            category   = $_.category
-            name       = $_.name
-            hash       = $_.hash
+            client_key  = $_.client_key
+            save_path   = $_.save_path
+            category    = $_.category
+            name        = $_.name
+            hash        = $_.hash
         }
     }
 }
@@ -127,9 +128,9 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
-if ( $forced_sections_hash ) {
+if ( $forced_sections_array ) {
     Write-Host 'Применяем forced_sections'
-    $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].section.ToString() -in $forced_sections_hash }
+    $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].section.ToString() -in $forced_sections_array }
     Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
@@ -142,7 +143,6 @@ if ( $new_torrents_keys ) {
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
-        Write-Host ( 'Анализируем раздачу ' + $new_tracker_data.id )
         $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
@@ -228,7 +228,7 @@ if ( $new_torrents_keys ) {
             # раздача новая, но выбрано не добавлять новые. Значит ничего и не делаем.
         }
         else {
-            Write-Host 'Случилось что-то странное, лучше остановимся' -ForegroundColor Red
+            Write-Host ( 'Случилось что-то странное на раздаче ' + $new_tracker_data.id + ' лучше остановимся' ) -ForegroundColor Red
             break
         }
     }
