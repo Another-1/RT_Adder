@@ -142,12 +142,12 @@ if ( $new_torrents_keys ) {
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
+        Write-Host ( 'Анализируем раздачу ' + $new_tracker_data.id )
         $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
-        # $existing_torrent = $clients_torrents | Where-Object { $_.topic_id -eq $new_tracker_data.id }
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
             $client = $clients[$existing_torrent.client_key]
-            Write-Host ( "Раздача " + $new_tracker_data.id + ' уже есть в клиенте ' + $client.Name )
+            Write-Host ( "Раздача " + $new_tracker_data.id + ' обнаружена клиенте ' + $client.Name )
         }
         else {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
@@ -203,7 +203,7 @@ if ( $new_torrents_keys ) {
             }
             Start-Sleep -Milliseconds 100
         }
-        elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) -or $new_tracker_data.releaser -in $priority_releasers ) {
+        elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_days * 86400 ) ) -or $new_tracker_data.releaser -in $priority_releasers -or $new_tracker_data.status -eq 2 ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
@@ -228,7 +228,7 @@ if ( $new_torrents_keys ) {
             # раздача новая, но выбрано не добавлять новые. Значит ничего и не делаем.
         }
         else {
-            Write-Output 'Случилось что-то странное, лучше остановимся' -ForegroundColor Red
+            Write-Host 'Случилось что-то странное, лучше остановимся' -ForegroundColor Red
             break
         }
     }

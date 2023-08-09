@@ -409,7 +409,7 @@ function Select-Client {
 }
 
 Function Set-ForumDetails ( $forum ) {
-    If ( ( [bool]$ini_data.proxy.activate_forum -or [bool]$ini_data.proxy.activate_api ) -and ( -not $forceNoProxy ) ) {
+    If ( ( $ini_data.proxy.activate_forum -eq '1' -or $ini_data.proxy.activate_api -eq '1' ) -and ( -not $forceNoProxy ) ) {
         Write-Host ( 'Используем ' + $ini_data.proxy.type.Replace('socks5h', 'socks5') + ' прокси ' + $ini_data.proxy.hostname + ':' + $ini_data.proxy.port )
         $forum.UseApiProxy = $ini_data.proxy.activate_api
         $forum.ProxyIP = $ini_data.proxy.hostname
