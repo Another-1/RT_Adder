@@ -104,6 +104,9 @@ if ( $clients_torrents.count -eq 0 ) {
 
     Write-Host 'Сортируем таблицы'
     $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
+        if ( !$_.infohash_v1 -or $nul -eq $_.infohash_v1 -or $_.infohash_v1 -eq '' ) {  # на всякий случай, сценарий непонятен.
+            $_.infohash_v1 = $_.hash
+        }
         $clients_tor_sort[$_.infohash_v1] = $_.topic_id
 
         $clients_tor_srt2[$_.topic_id] = @{
