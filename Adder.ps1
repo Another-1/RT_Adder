@@ -214,10 +214,10 @@ if ( $new_torrents_keys ) {
             }
             $save_path = $section_details[$new_tracker_data.section][1]
             if ( $subfolder_kind -eq 1 ) {
-                $save_path = ( $save_path -replace ( '\\$', '')) + '/' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
+                $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
             }
             elseif ( $subfolder_kind -eq 2 ) {
-                $save_path = ( $save_path -replace ( '\\$', '')) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
+                $save_path = ( $save_path -replace ( '\\$', '')  -replace ( '/$', '') ) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
         }
