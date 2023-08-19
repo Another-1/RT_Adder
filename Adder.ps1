@@ -39,11 +39,13 @@ if ( $forced_sections ) {
     $forced_sections.split(',') | ForEach-Object { $forced_sections_array += $_ }
 }
 
-if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
-    Write-Host 'Подождём окончания профилактических работ на сервере'
-    while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
-        Start-Sleep -Seconds 60
-    }
+if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'59' ) {
+    # Write-Host 'Подождём окончания профилактических работ на сервере'
+    # while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
+    #     Start-Sleep -Seconds 60
+    # }
+    Write-Host 'Профилактические работы на сервере'
+    exit
 }
 
 Write-Host 'Достаём из TLO данные о разделах'

@@ -245,9 +245,12 @@ function Send-Report ( $wait = $false ) {
         New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
         try {
             Write-Host 'Обновляем БД'
-            . $php_path "$tlo_path\php\actions\update_info.php" | Out-Null
+            # . $php_path "$tlo_path\php\actions\update_info.php" | Out-Null
+            . $php_path "$tlo_path\cron\update.php"
+            . $php_path "$tlo_path\cron\keepers.php"
             Write-Host 'Шлём отчёт'
-            . $php_path "$tlo_path\php\actions\send_reports.php" | Out-Null
+            # . $php_path "$tlo_path\php\actions\send_reports.php" | Out-Null
+            . $php_path "$tlo_path\cron\reports.php"
         }
         finally {
             Remove-Item $lock_file -ErrorAction SilentlyContinue
