@@ -170,7 +170,7 @@ if ( $new_torrents_keys ) {
         if ( $existing_torrent ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
-            $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name + '(' + $new_tracker_data.size + ')'
+            $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
             Write-Host $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
@@ -245,6 +245,7 @@ if ( $new_torrents_keys ) {
 
 Remove-Variable -Name obsolete -ErrorAction SilentlyContinue
 if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report_obsolete -eq 'Y' ) {
+    Write-Output 'Ищем неактуальные раздачи.'
     $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_] } | `
         Where-Object { $tracker_torrents.Values.id -notcontains $clients_tor_sort[$_] } | Where-Object { !$ignored_obsolete -or $nul -eq $ignored_obsolete[$clients_tor_sort[$_]] }
     $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys }
