@@ -20,7 +20,6 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
 }
 
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
-    # . "$PSScriptRoot\_setuper.ps1"
     Set-Preferences
 }
 else { . "$PSScriptRoot\_settings.ps1" }
@@ -30,7 +29,6 @@ Write-Output 'Читаем настройки Web-TLO'
 $ini_path = $tlo_path + '\data\config.ini'
 $ini_data = Get-IniContent $ini_path
 
-# if ( !$forced_sections ) {
 $sections = $ini_data.sections.subsections.split( ',' )
 if ( $forced_sections ) {
     Write-Host 'Анализируем forced_sections'
@@ -45,10 +43,6 @@ $MoscowTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTi
 
 Write-Output 'Проверяем, что в Москве не 4 часа ночи (профилактика)'
 if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
-    # Write-Host 'Подождём окончания профилактических работ на сервере'
-    # while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
-    #     Start-Sleep -Seconds 60
-    # }
     Write-Host 'Профилактические работы на сервере' -ForegroundColor Red
     exit
 }
@@ -278,7 +272,7 @@ if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) -and $send_reports -eq 'Y
     New-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
 elseif ( $send_reports -ne 'Y' ) {
-    Remove-Item -Path  $report_flag_file -ErrorAction SilentlyContinue
+    Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
 
 if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
@@ -288,8 +282,3 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
 If ( $send_reports -eq 'Y' -and $php_path -and ( Test-Path -Path $report_flag_file ) -and ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
     Send-Report $true # с паузой.
 }
-
-
-# Remove-Variable -Name added -ErrorAction SilentlyContinue
-# Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
-
