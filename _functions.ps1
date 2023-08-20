@@ -247,6 +247,7 @@ function Send-Report ( $wait = $false ) {
             Write-Host 'Обновляем БД'
             # . $php_path "$tlo_path\php\actions\update_info.php" | Out-Null
             . $php_path "$tlo_path\cron\update.php"
+            Write-Host 'Обновляем списки других хранителей'
             . $php_path "$tlo_path\cron\keepers.php"
             Write-Host 'Шлём отчёт'
             # . $php_path "$tlo_path\php\actions\send_reports.php" | Out-Null

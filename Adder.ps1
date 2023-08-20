@@ -39,7 +39,10 @@ if ( $forced_sections ) {
     $forced_sections.split(',') | ForEach-Object { $forced_sections_array += $_ }
 }
 
-if ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'59' ) {
+$MoscowTZ = [System.TimeZoneInfo]::FindSystemTimeZoneById("Russian Standard Time")
+$MoscowTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), $MoscowTZ)
+
+if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
     # Write-Host 'Подождём окончания профилактических работ на сервере'
     # while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
     #     Start-Sleep -Seconds 60
@@ -106,17 +109,18 @@ if ( $clients_torrents.count -eq 0 ) {
 
     Write-Host 'Сортируем таблицы'
     $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
-        if ( !$_.infohash_v1 -or $nul -eq $_.infohash_v1 -or $_.infohash_v1 -eq '' ) {  # на всякий случай, сценарий непонятен.
+        if ( !$_.infohash_v1 -or $nul -eq $_.infohash_v1 -or $_.infohash_v1 -eq '' ) {
+            # на всякий случай, сценарий непонятен.
             $_.infohash_v1 = $_.hash
         }
         $clients_tor_sort[$_.infohash_v1] = $_.topic_id
 
         $clients_tor_srt2[$_.topic_id] = @{
-            client_key  = $_.client_key
-            save_path   = $_.save_path
-            category    = $_.category
-            name        = $_.name
-            hash        = $_.hash
+            client_key = $_.client_key
+            save_path  = $_.save_path
+            category   = $_.category
+            name       = $_.name
+            hash       = $_.hash
         }
     }
 }
@@ -164,7 +168,7 @@ if ( $new_torrents_keys ) {
             }
         }
         if ( $new_tracker_data.releaser -in $priority_releasers.keys ) {
-          $min_secs = $priority_releasers.keys[$new_tracker_data.releaser] * 86400
+            $min_secs = $priority_releasers.keys[$new_tracker_data.releaser] * 86400
         }
         else {
             $min_secs = $min_days * 86400
@@ -228,7 +232,7 @@ if ( $new_torrents_keys ) {
                 $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
             }
             elseif ( $subfolder_kind -eq 2 ) {
-                $save_path = ( $save_path -replace ( '\\$', '')  -replace ( '/$', '') ) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
+                $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
         }
@@ -263,16 +267,18 @@ if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report
 Remove-Variable -Name clients_tor_sort -ErrorAction SilentlyContinue
 Remove-Variable -Name clients_tor_srt2 -ErrorAction SilentlyContinue
 
-if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
-    Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
-}
-If ( $send_reports -eq 'Y' -and $php_path -and ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) ) {
-    Send-Report $true # с паузой.
-}
-
-Remove-Variable -Name added -ErrorAction SilentlyContinue
-Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
-
 if ( $control -eq 'Y' ) {
     . "$PSScriptRoot\controller.ps1"
 }
+
+if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
+    Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
+}
+
+If ( $send_reports -eq 'Y' -and $php_path -and ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) -and ( ( Get-Date -Format HH ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
+    Send-Report $true # с паузой.
+}
+
+# Remove-Variable -Name added -ErrorAction SilentlyContinue
+# Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
+
