@@ -281,4 +281,5 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
 
 If ( $send_reports -eq 'Y' -and $php_path -and ( Test-Path -Path $report_flag_file ) -and ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
     Send-Report $true # с паузой.
+    Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
