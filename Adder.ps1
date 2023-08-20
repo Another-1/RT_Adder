@@ -39,15 +39,17 @@ if ( $forced_sections ) {
     $forced_sections.split(',') | ForEach-Object { $forced_sections_array += $_ }
 }
 
+Write-Output 'Ищем московское время'
 $MoscowTZ = [System.TimeZoneInfo]::FindSystemTimeZoneById("Russian Standard Time")
 $MoscowTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), $MoscowTZ)
 
+Write-Output 'Проверяем, что в Москве не 4 часа ночи (профилактика)'
 if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
     # Write-Host 'Подождём окончания профилактических работ на сервере'
     # while ( ( Get-Date -Format HH ) -eq '04' -and ( Get-Date -Format mm ) -in '20'..'52' ) {
     #     Start-Sleep -Seconds 60
     # }
-    Write-Host 'Профилактические работы на сервере'
+    Write-Host 'Профилактические работы на сервере' -ForegroundColor Red
     exit
 }
 
@@ -271,12 +273,17 @@ if ( $control -eq 'Y' ) {
     . "$PSScriptRoot\controller.ps1"
 }
 
+$report_flag_file = "$PSScriptRoot\report_needed.flg"
+if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) {
+    New-Item -Path $report_flag_file -ErrorAction SilentlyContinue
+}
 if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
 
-If ( $send_reports -eq 'Y' -and $php_path -and ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) -and ( ( Get-Date -Format HH ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
+If ( $send_reports -eq 'Y' -and $php_path -and ( Test-Path -Path $report_flag_file ) -and ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
     Send-Report $true # с паузой.
+    Remote-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
 
 # Remove-Variable -Name added -ErrorAction SilentlyContinue
