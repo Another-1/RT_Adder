@@ -274,7 +274,7 @@ if ( $control -eq 'Y' ) {
 }
 
 $report_flag_file = "$PSScriptRoot\report_needed.flg"
-if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) {
+if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) -and $send_reports -eq 'Y' -and $php_path ) {
     New-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
 if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
@@ -283,8 +283,8 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
 
 If ( $send_reports -eq 'Y' -and $php_path -and ( Test-Path -Path $report_flag_file ) -and ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
     Send-Report $true # с паузой.
-    Remote-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
+Remote-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 
 # Remove-Variable -Name added -ErrorAction SilentlyContinue
 # Remove-Variable -Name refreshed -ErrorAction SilentlyContinue
