@@ -214,7 +214,7 @@ if ( $new_torrents_keys ) {
             }
             Start-Sleep -Milliseconds 100
         }
-        elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_secs ) ) -or $new_tracker_data.status -eq 2 ) {
+        elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_secs ) ) -or $new_tracker_data.status -eq 2 ) ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
@@ -280,6 +280,11 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
 }
 
 If ( $send_reports -eq 'Y' -and $php_path -and ( Test-Path -Path $report_flag_file ) -and ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
-    Send-Report $true # с паузой.
+    if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) {
+        Send-Report $true # с паузой.
+    }
+    else {
+        Send-Report $false # без паузы, так как это сработал флаг от предыдущего прогона.
+    }
     Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
