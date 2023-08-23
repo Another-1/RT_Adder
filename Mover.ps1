@@ -1,6 +1,25 @@
+Write-Host 'Проверяем версию Powershell...'
+If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
+    Write-Host 'У вас слишком древний Powershell, обновитесь с https://github.com/PowerShell/PowerShell#get-powershell ' -ForegroundColor Red
+    Pause
+    Exit
+}
 Write-Host 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
-. "$PSScriptRoot\_settings.ps1"
+
+if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue) ) ) {
+    Write-Output 'Не установлен модуль PSIni для чтения настроек Web-TLO, ставим...'
+    Install-Module -Name PsIni -Scope CurrentUser -Force
+}
+if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyContinue) ) ) {
+    Write-Output 'Не установлен модуль PSSQLite для получения данных из базы Web-TLO, ставим...'
+    Install-Module -Name PSSQLite -Scope CurrentUser -Force
+}
+
+If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
+    Set-Preferences
+}
+else { . "$PSScriptRoot\_settings.ps1" }
 
 $ini_path = $tlo_path + '\data\config.ini'
 $ini_data = Get-IniContent $ini_path
