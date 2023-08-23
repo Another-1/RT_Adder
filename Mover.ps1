@@ -11,11 +11,6 @@ if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue
     Write-Output 'Не установлен модуль PSIni для чтения настроек Web-TLO, ставим...'
     Install-Module -Name PsIni -Scope CurrentUser -Force
 }
-if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyContinue) ) ) {
-    Write-Output 'Не установлен модуль PSSQLite для получения данных из базы Web-TLO, ставим...'
-    Install-Module -Name PSSQLite -Scope CurrentUser -Force
-}
-
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
     Set-Preferences
 }
