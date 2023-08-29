@@ -85,12 +85,14 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
                 Select-Object name, hash, save_path, content_path, category, state, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1 | Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch { exit }
+        if ( !$torrents_list ) { $torrents_list = @{} }
         return $torrents_list
     }
 }
 
 function Get-TopicIDs ( $client, $torrent_list ) {
     Write-Host 'Ищем ID'
+    if ( $torrent_list.count -gt 0 ) {
     $torrent_list | ForEach-Object {
         if ( $nul -ne $tracker_torrents ) { $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id }
         if ( $nul -eq $_.topic_id ) {
@@ -105,6 +107,7 @@ function Get-TopicIDs ( $client, $torrent_list ) {
             $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
         }
     }
+}
 }
 
 function Initialize-Forum () {

@@ -1,10 +1,10 @@
-Write-Host 'Проверяем версию Powershell...'
+Write-Output 'Проверяем версию Powershell...'
 If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
     Write-Host 'У вас слишком древний Powershell, обновитесь с https://github.com/PowerShell/PowerShell#get-powershell ' -ForegroundColor Red
     Pause
     Exit
 }
-Write-Host 'Подгружаем функции'
+Write-Output 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
 
 try { . "$PSScriptRoot\_client_ssd.ps1" }
@@ -31,7 +31,7 @@ $ini_data = Get-IniContent $ini_path
 
 $sections = $ini_data.sections.subsections.split( ',' )
 if ( $forced_sections ) {
-    Write-Host 'Анализируем forced_sections'
+    Write-Output 'Анализируем forced_sections'
     $forced_sections = $forced_sections.Replace(' ', '')
     $forced_sections_array = @()
     $forced_sections.split(',') | ForEach-Object { $forced_sections_array += $_ }
@@ -40,6 +40,7 @@ if ( $forced_sections ) {
 Write-Output 'Ищем московское время'
 $MoscowTZ = [System.TimeZoneInfo]::FindSystemTimeZoneById("Russian Standard Time")
 $MoscowTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), $MoscowTZ)
+Write-Output ( 'Московское время ' + ( Get-Date($MoscowTime) -uformat %H ) + ' ч ' + ( Get-Date($MoscowTime) -uformat %M ) + ' мин' )
 
 Write-Output 'Проверяем, что в Москве не 4 часа ночи (профилактика)'
 if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
@@ -47,7 +48,7 @@ if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
     exit
 }
 
-Write-Host 'Достаём из TLO данные о разделах'
+Write-Output 'Достаём из TLO данные о разделах'
 $section_details = @{}
 $ini_data.Keys | Where-Object { $_ -match '^\d+$' } | ForEach-Object {
     $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder', $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics', $ini_data[ $_ ].'label', $ini_data[$_].'control-peers' )
@@ -90,7 +91,7 @@ if ( $nul -eq $clients_tor_sort -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) {
 }
 
 if ( $clients_torrents.count -eq 0 ) {
-    Write-Host 'Получаем из TLO данные о клиентах'
+    Write-Output 'Получаем из TLO данные о клиентах'
     $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
         $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
     } 
@@ -103,7 +104,7 @@ if ( $clients_torrents.count -eq 0 ) {
         $clients_torrents += $client_torrents
     }
 
-    Write-Host 'Сортируем таблицы'
+    Write-Output 'Сортируем таблицы'
     $clients_torrents | Where-Object { $nul -ne $_.topic_id } | ForEach-Object {
         if ( !$_.infohash_v1 -or $nul -eq $_.infohash_v1 -or $_.infohash_v1 -eq '' ) {
             # на всякий случай, сценарий непонятен.
@@ -120,23 +121,23 @@ if ( $clients_torrents.count -eq 0 ) {
         }
     }
 }
-Write-Host 'Ищем новые раздачи'
+Write-Output 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
 
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
 
-Write-Host ( 'Новых раздач: ' + $new_torrents_keys.count )
+Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
-    Write-Host 'Отсеиваем раздачи из чёрного списка'
+    Write-Output 'Отсеиваем раздачи из чёрного списка'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
-    Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
+    Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
 if ( $forced_sections_array ) {
-    Write-Host 'Применяем forced_sections'
+    Write-Output 'Применяем forced_sections'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].section.ToString() -in $forced_sections_array }
-    Write-Host ( 'Осталось раздач: ' + $new_torrents_keys.count )
+    Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
 Remove-Variable -Name added -ErrorAction SilentlyContinue
@@ -152,14 +153,14 @@ if ( $new_torrents_keys ) {
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
             $client = $clients[$existing_torrent.client_key]
-            Write-Host ( "Раздача " + $new_tracker_data.id + ' обнаружена клиенте ' + $client.Name )
+            Write-Output ( "Раздача " + $new_tracker_data.id + ' обнаружена клиенте ' + $client.Name )
         }
         else {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
             if (!$client) {
                 $client = $clients[$section_details[$new_tracker_data.section][0].ToString()]
                 If ( $get_news -eq 'Y') {
-                    Write-Host ( "Для раздачи " + $new_tracker_data.id + ' выбран клиент ' + $client.Name )
+                    Write-Output ( "Для раздачи " + $new_tracker_data.id + ' выбран клиент ' + $client.Name )
                 }
             }
         }
@@ -173,7 +174,7 @@ if ( $new_torrents_keys ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
-            Write-Host $text
+            Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
                 $refreshed[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
@@ -184,7 +185,7 @@ if ( $new_torrents_keys ) {
                 $url_get = $client.ip + ':' + $client.Port + '/api/v2/app/preferences'
                 $old_temp_path = ( ( Invoke-WebRequest -Uri $url_get -WebSession $client.sid ).content | ConvertFrom-Json ).temp_path
                 if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
-                    Write-Host ( 'Временно меняем temp path на ' + $existing_torrent.save_path[0] + ':\Incomplete' )
+                    Write-Output ( 'Временно меняем temp path на ' + $existing_torrent.save_path[0] + ':\Incomplete' )
                     $url_set = $client.ip + ':' + $client.Port + '/api/v2/app/setPreferences'
                     $param = @{ json = ( @{"temp_path" = ( $existing_torrent.save_path[0] + ':\Incomplete') } | ConvertTo-Json -Compress ) }
                     Invoke-WebRequest -Uri $url_set -WebSession $client.sid -Body $param -Method POST
@@ -195,7 +196,7 @@ if ( $new_torrents_keys ) {
             Add-ClientTorrent $client $new_torrent_file $existing_torrent.save_path $existing_torrent.category
 
             While ($true) {
-                Write-Host 'Ждём 5 секунд чтобы раздача точно "подхватилась"'
+                Write-Output 'Ждём 5 секунд чтобы раздача точно "подхватилась"'
                 Start-Sleep -Seconds 5
                 $new_tracker_data.name = ( Get-Torrents $client '' $false $new_torrent_key $nul ).name
                 if ( $nul -ne $new_tracker_data.name ) { break }
@@ -207,7 +208,7 @@ if ( $new_torrents_keys ) {
                 Remove-ClientTorrent $client $existing_torrent.hash $true
             }
             if ( $old_temp_path ) {
-                Write-Host ( 'Возвращаем temp path на ' + $old_temp_path )
+                Write-Output ( 'Возвращаем temp path на ' + $old_temp_path )
                 $param = @{ json = ( @{"temp_path" = $old_temp_path } | ConvertTo-Json -Compress ) }
                 Invoke-WebRequest -Uri $url_set -WebSession $client.sid -Body $param -Method POST
                 Remove-Variable -Name old_temp_path
@@ -218,7 +219,7 @@ if ( $new_torrents_keys ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
-            Write-Host $text
+            Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$added[ $client.Name] ) { $added[ $client.Name] = @() }
                 $added[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
@@ -233,7 +234,7 @@ if ( $new_torrents_keys ) {
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
         }
         elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s ).ToInt32($nul) - $min_days * 86400 ) ) {
-            Write-Host 'Раздача' $new_tracker_data.id 'слишком новая.'
+            Write-Output ( 'Раздача ' + $new_tracker_data.id + ' слишком новая.' )
         }
         elseif ( $get_news -eq 'N') {
             # раздача новая, но выбрано не добавлять новые. Значит ничего и не делаем.
@@ -253,7 +254,7 @@ if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report
     $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys }
     $obsolete_torrents | ForEach-Object {
         If ( !$obsolete ) { $obsolete = @{} }
-        Write-Host ( "Левая раздача " + $_.topic_id + ' в клиенте ' + $clients[$_.client_key].Name )
+        Write-Output ( "Левая раздача " + $_.topic_id + ' в клиенте ' + $clients[$_.client_key].Name )
         if ( !$obsolete[$clients[$_.client_key].Name] ) { $obsolete[ $clients[$_.client_key].Name] = @() }
         $obsolete[$clients[$_.client_key].Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $_.topic_id )
     }
