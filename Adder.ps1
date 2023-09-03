@@ -50,7 +50,7 @@ if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
 
 Write-Output 'Достаём из TLO данные о разделах'
 $section_details = @{}
-$sections | Where-Object { $_ -match '^\d+$' } | ForEach-Object {
+$sections | ForEach-Object {
     $section_details[$_.ToInt32( $nul ) ] = @($ini_data[ $_ ].client, $ini_data[ $_ ].'data-folder', $ini_data[ $_ ].'data-sub-folder', $ini_data[ $_ ].'hide-topics', $ini_data[ $_ ].'label', $ini_data[$_].'control-peers' )
 }
 if ( ( $nul -eq $tracker_torrents ) -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) { $tracker_torrents = @{} }
@@ -159,11 +159,12 @@ if ( $new_torrents_keys ) {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
             if (!$client) {
                 $client = $clients[$section_details[$new_tracker_data.section][0].ToString()]
-                If ( $get_news -eq 'Y') {
-                    Write-Output ( "Для раздачи " + $new_tracker_data.id + ' выбран клиент ' + $client.Name )
-                }
+                # If ( $get_news -eq 'Y') {
+                #     Write-Output ( "Для раздачи " + $new_tracker_data.id + ' выбран клиент ' + $client.Name )
+                # }
             }
         }
+        
         if ( $new_tracker_data.releaser -in $priority_releasers.keys ) {
             $min_secs = $priority_releasers.keys[$new_tracker_data.releaser] * 86400
         }

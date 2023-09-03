@@ -138,10 +138,11 @@ function Initialize-Forum () {
         }
         catch {
             Start-Sleep -Seconds 10; $i++; Write-Host "Попытка номер $i" -ForegroundColor Cyan
+            If ( $i -gt 20 ) { break }
         }
     }
     if ( $sid.Cookies.Count -eq 0 ) {
-        Write-Host '[forum] Не удалось авторизоваться на форуме.'
+        Write-Host 'Не удалось авторизоваться на форуме.' -ForegroundColor Red
         Exit
     }
     $forum.sid = $sid
