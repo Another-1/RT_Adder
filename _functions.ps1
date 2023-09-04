@@ -117,7 +117,7 @@ function Initialize-Forum () {
     }
     Write-Host 'Авторизуемся на форуме.'
 
-    $login_url = 'https://rutracker.org/forum/login.php'
+    $login_url = 'https://' + $forum.url + '/forum/login.php'
     # $login_url = 'https://rutracker.net/forum/login.php'
     $headers = @{ 'User-Agent' = 'Mozilla/5.0' }
     $payload = @{ 'login_username' = $forum.login; 'login_password' = $forum.password; 'login' = '%E2%F5%EE%E4' }
@@ -151,22 +151,22 @@ function Initialize-Forum () {
 
 function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     if ( !$forum.sid ) { Initialize-Forum }
-    $forum_url = 'https://rutracker.org/forum/dl.php?t=' + $Id
+    $get_url = 'https://'+ $forum.url + '/forum/dl.php?t=' + $Id
     if ( $null -eq $save_path ) { $Path = $PSScriptRoot + '\' + $Id + '.torrent' } else { $path = $save_path + '\' + $Id + '.torrent' }
     $i = 1
     while ( $true ) {
         try { 
             if ( [bool]$forum.ProxyURL ) {
                 if ( $proxycred ) {
-                    Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -ProxyCredential $proxyCred
+                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -ProxyCredential $proxyCred
                 }
                 else {
-                    Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
+                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
                 }
                 break
             }
             else {
-                Invoke-WebRequest -uri $forum_url -WebSession $forum.sid -OutFile $Path -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
+                Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
                 break
             }
         }
@@ -429,6 +429,7 @@ Function Set-ForumDetails ( $forum ) {
     $forum.UseProxy = $ini_data.proxy.activate_forum
     $forum.Login = $ini_data.'torrent-tracker'.login
     $forum.Password = $ini_data.'torrent-tracker'.password
+    $forum.url = $ini_data.'torrent-tracker'.forum_url
 }
 
 function Select-Path ( $direction ) {

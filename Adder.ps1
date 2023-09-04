@@ -178,7 +178,7 @@ if ( $new_torrents_keys ) {
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
-                $refreshed[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                $refreshed[ $client.Name] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
                 $refreshed_ids += $new_tracker_data.id
             }
             # подмена временного каталога если раздача хранится на SSD.
@@ -223,7 +223,7 @@ if ( $new_torrents_keys ) {
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$added[ $client.Name] ) { $added[ $client.Name] = @() }
-                $added[ $client.Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                $added[ $client.Name] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
             }
             $save_path = $section_details[$new_tracker_data.section][1]
             if ( $subfolder_kind -eq 1 ) {
@@ -257,7 +257,7 @@ if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report
         If ( !$obsolete ) { $obsolete = @{} }
         Write-Output ( "Левая раздача " + $_.topic_id + ' в клиенте ' + $clients[$_.client_key].Name )
         if ( !$obsolete[$clients[$_.client_key].Name] ) { $obsolete[ $clients[$_.client_key].Name] = @() }
-        $obsolete[$clients[$_.client_key].Name] += ( 'https://rutracker.org/forum/viewtopic.php?t=' + $_.topic_id )
+        $obsolete[$clients[$_.client_key].Name] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $_.topic_id )
     }
 }
 
