@@ -51,6 +51,6 @@ $UserTorrents = Get-UserTorrents $forum
 
 foreach ( $torrent in $clients_torrents) {
     if ( $torrent.topic_id -in $UserTorrents ) {
-        Set-Comment $client $torrent $label
+        Set-Comment $clients[$torrent.client_key] $torrent $label
     }
 }
