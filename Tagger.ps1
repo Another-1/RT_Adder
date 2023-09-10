@@ -28,35 +28,28 @@ if ( $forum.ProxyURL -and $forum.ProxyPassword -and $forum.ProxyPassword -ne '')
 
 $label = Get-String $true 'Укажите метку'
 
-$client = Select-Client
-Initialize-Client $client
-
 $tracker_torrents = @{}
 foreach ( $section in $sections ) {
     $section_torrents = Get-SectionTorrents $forum $section -1
-    $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10, 11 ) } | ForEach-Object {
+    $section_torrents.Keys | ForEach-Object {
         $tracker_torrents[$section_torrents[$_][7]] = @{
             id             = $_
-            section        = $section.ToInt32($nul)
-            status         = $section_torrents[$_][0]
-            name           = $nul
-            reg_time       = $section_torrents[$_][2]
-            size           = $section_torrents[$_][3]
-            seeders        = $section_torrents[$_][1]
-            hidden_section = $section_details[$section.toInt32($nul)][3]
-            releaser       = $section_torrents[$_][8]
         }
     }
 }
 
+$clients_torrents = @()
+foreach ($clientkey in $clients.Keys ) {
+    $client = $clients[ $clientkey ]
+    Initialize-Client( $client )
+    $client_torrents = Get-Torrents $client '' $false $nul $clientkey
+    Get-TopicIDs $client $client_torrents
+    $clients_torrents += $client_torrents
+}
+
 $UserTorrents = Get-UserTorrents $forum
 
-try { $have_list = ( Get-Torrents $client '' $false ) }
-catch { Write-Host 'Не удалось получить список раздач из клиента'; exit }
-
-Get-TopicIDs $client $have_list
-
-foreach ( $torrent in $have_list) {
+foreach ( $torrent in $clients_torrents) {
     if ( $torrent.topic_id -in $UserTorrents ) {
         Set-Comment $client $torrent $label
     }
