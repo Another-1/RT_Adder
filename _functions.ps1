@@ -93,21 +93,21 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
 function Get-TopicIDs ( $client, $torrent_list ) {
     Write-Host 'Ищем ID'
     if ( $torrent_list.count -gt 0 ) {
-    $torrent_list | ForEach-Object {
-        if ( $nul -ne $tracker_torrents ) { $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id }
-        if ( $nul -eq $_.topic_id ) {
-            $Params = @{ hash = $_.hash }
-            try {
-                $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+        $torrent_list | ForEach-Object {
+            if ( $nul -ne $tracker_torrents ) { $_.topic_id = $tracker_torrents[$_.hash.toUpper()].id }
+            if ( $nul -eq $_.topic_id ) {
+                $Params = @{ hash = $_.hash }
+                try {
+                    $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+                    Start-Sleep -Milliseconds 10
+                }
+                catch {
+                    pause
+                }
+                $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
             }
-            catch {
-                pause
-            }
-            Start-Sleep -Milliseconds 10
-            $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
         }
     }
-}
 }
 
 function Initialize-Forum () {
@@ -151,7 +151,7 @@ function Initialize-Forum () {
 
 function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     if ( !$forum.sid ) { Initialize-Forum }
-    $get_url = 'https://'+ $forum.url + '/forum/dl.php?t=' + $Id
+    $get_url = 'https://' + $forum.url + '/forum/dl.php?t=' + $Id
     if ( $null -eq $save_path ) { $Path = $PSScriptRoot + '\' + $Id + '.torrent' } else { $path = $save_path + '\' + $Id + '.torrent' }
     $i = 1
     while ( $true ) {
@@ -274,7 +274,7 @@ function Get-SectionTorrents ( $forum, $section, $max_seeds) {
         try {
             if ( [bool]$forum.ProxyURL -and $forum.UseApiProxy -eq 1 ) {
                 if ( $proxyCred ) {
-                $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL -ProxyCredential $proxyCred ).Content | ConvertFrom-Json -AsHashtable ).result
+                    $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL -ProxyCredential $proxyCred ).Content | ConvertFrom-Json -AsHashtable ).result
                 }
                 else {
                     $tmp_torrents = ( ( Invoke-WebRequest -Uri "https://api.rutracker.cc/v1/static/pvc/f/$section" -Proxy $forum.ProxyURL ).Content | ConvertFrom-Json -AsHashtable ).result
@@ -295,6 +295,34 @@ function Get-SectionTorrents ( $forum, $section, $max_seeds) {
         Remove-Variable -Name tmp_torrents_2
         Write-Host ( 'Раздач с кол-вом сидов не более ' + $seed_limit + ': ' + $tmp_torrents.count )
     }
+    if ( !$tmp_torrents ) {
+        Write-Host 'Не получилось' -ForegroundColor Red
+        exit 
+    }
+    return $tmp_torrents
+}
+
+function Get-UserTorrents ( $forum ) {
+    $i = 1
+    Write-Host ('Получаем с трекера раздачи пользователя ' + $forum.UserID + '... ' )
+    while ( $true) {
+        try {
+            if ( [bool]$forum.ProxyURL -and $forum.UseApiProxy -eq 1 ) {
+                if ( $proxyCred ) {
+                    $tmp_torrents = ( ( Invoke-WebRequest -Uri ( 'https://api.rutracker.cc/v1/get_user_torrents?by=user_id&val=' + $forum.UserID ) -Proxy $forum.ProxyURL -ProxyCredential $proxyCred ).Content | ConvertFrom-Json -AsHashtable ).result[$forum.UserID]
+                }
+                else {
+                    $tmp_torrents = ( ( Invoke-WebRequest -Uri ( 'https://api.rutracker.cc/v1/get_user_torrents?by=user_id&val=' + $forum.UserID ) -Proxy $forum.ProxyURL ).Content | ConvertFrom-Json -AsHashtable ).result[$forum.UserID]
+                }
+            }
+            else {
+                $tmp_torrents = ( ( Invoke-WebRequest -Uri ( 'https://api.rutracker.cc/v1/get_user_torrents?by=user_id&val=' + $forum.UserID ) ).Content | ConvertFrom-Json -AsHashtable ).result[$forum.UserID]
+            }
+            break
+        }
+        catch { Start-Sleep -Seconds 10; $i++; Write-Host "Попытка номер $i" -ForegroundColor Cyan }
+    }
+    Write-Host ( 'Получено раздач: ' + $tmp_torrents.count )
     if ( !$tmp_torrents ) {
         Write-Host 'Не получилось' -ForegroundColor Red
         exit 
@@ -430,6 +458,7 @@ Function Set-ForumDetails ( $forum ) {
     $forum.Login = $ini_data.'torrent-tracker'.login
     $forum.Password = $ini_data.'torrent-tracker'.password
     $forum.url = $ini_data.'torrent-tracker'.forum_url
+    $forum.UserID = $ini_data.'torrent-tracker'.user_id
 }
 
 function Select-Path ( $direction ) {
@@ -489,4 +518,24 @@ function Convert-Path ( $client, $path ) {
         $path = '\\' + $client_hosts[$client.Name] + '\' + $path.replace( ':', '')
     }
     return $path
+}
+
+function Get-Clients {
+    $clients = @{}
+    Write-Host 'Получаем из TLO данные о клиентах'
+    $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
+        $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+        $clients_sort = [ordered]@{}
+        $clients.GetEnumerator() | Sort-Object -Property key | ForEach-Object { $clients_sort[$_.key] = $clients[$_.key] }
+        $clients = $clients_sort
+        Remove-Variable -Name clients_sort -ErrorAction SilentlyContinue
+    } 
+    return $clients
+}
+
+function Set-Comment ( $client, $torrent, $label ) {
+    Write-Output ( 'Метим раздачу ' + $torrent.topic_id )
+    $tag_url = $client.IP + ':' + $client.Port + '/api/v2/torrents/addTags'
+    $tag_body = @{ hashes = $torrent.hash; tags = $label }
+    Invoke-WebRequest -Method POST -Uri $tag_url -Headers $loginheader -Body $tag_body -WebSession $client.sid | Out-Null
 }
