@@ -1,3 +1,4 @@
+Replacer.ps1
 _settings.ps1
 _client_ssd.ps1
 controller.ps1
@@ -7,4 +8,3 @@ in_progress.lck
 *.torrent
 Aligner.ps1
 report_needed.flg
-Replacer.ps1
