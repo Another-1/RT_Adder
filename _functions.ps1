@@ -82,7 +82,8 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
     while ( $true ) {
         try {
             $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | `
-                Select-Object name, hash, save_path, content_path, category, state, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1 | Where-Object { $_.save_path -match ('^' + $dsk ) }
+                Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size | `
+                Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch { exit }
         if ( !$torrents_list ) { $torrents_list = @{} }
@@ -118,7 +119,6 @@ function Initialize-Forum () {
     Write-Host 'Авторизуемся на форуме.'
 
     $login_url = 'https://' + $forum.url + '/forum/login.php'
-    # $login_url = 'https://rutracker.net/forum/login.php'
     $headers = @{ 'User-Agent' = 'Mozilla/5.0' }
     $payload = @{ 'login_username' = $forum.login; 'login_password' = $forum.password; 'login' = '%E2%F5%EE%E4' }
     $i = 1
@@ -127,13 +127,13 @@ function Initialize-Forum () {
         try {
             if ( [bool]$forum.ProxyURL ) {
                 if ( $proxycred ) {
-                    Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL -ProxyCredential $proxyCred | Out-Null
+                    Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -SkipHttpErrorCheck -Proxy $forum.ProxyURL -ProxyCredential $proxyCred | Out-Null
                 }
                 else {
-                    Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -Proxy $forum.ProxyURL | Out-Null
+                    Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -SkipHttpErrorCheck -Proxy $forum.ProxyURL | Out-Null
                 }
             }
-            else { Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck | Out-Null }
+            else { Invoke-WebRequest -Uri $login_url -Method Post -Headers $headers -Body $payload -SessionVariable sid -MaximumRedirection 999 -SkipHttpErrorCheck | Out-Null }
             break
         }
         catch {
@@ -154,19 +154,19 @@ function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     $get_url = 'https://' + $forum.url + '/forum/dl.php?t=' + $Id
     if ( $null -eq $save_path ) { $Path = $PSScriptRoot + '\' + $Id + '.torrent' } else { $path = $save_path + '\' + $Id + '.torrent' }
     $i = 1
-    while ( $true ) {
+    while ( $i -le 30 ) {
         try { 
             if ( [bool]$forum.ProxyURL ) {
                 if ( $proxycred ) {
-                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck -ProxyCredential $proxyCred
+                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -SkipHttpErrorCheck -ProxyCredential $proxyCred
                 }
                 else {
-                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
+                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -SkipHttpErrorCheck
                 }
                 break
             }
             else {
-                Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -MaximumRedirection 999 -ErrorAction Ignore -SkipHttpErrorCheck
+                Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -MaximumRedirection 999 -SkipHttpErrorCheck
                 break
             }
         }
@@ -238,27 +238,33 @@ function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
     }
 }
 
-function Send-Report ( $wait = $false ) {
+function Send-Report () {
+    Write-Host 'Шлём отчёт'
+    . $php_path "$tlo_path\cron\reports.php"
+}
+
+function Update-Stats ( $wait = $false, $check = $false, $send_rep = $false ) {
     $lock_file = "$PSScriptRoot\in_progress.lck"
     $in_progress = Test-Path -Path $lock_file
     if ( !$in_progress ) {
-        if ( $wait ) {
-            Write-Host 'Подождём 5 минут, вдруг быстро скачается.'
-            Start-Sleep -Seconds 300
-        }
-        New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
-        try {
-            Write-Host 'Обновляем БД'
-            # . $php_path "$tlo_path\php\actions\update_info.php" | Out-Null
-            . $php_path "$tlo_path\cron\update.php"
-            Write-Host 'Обновляем списки других хранителей'
-            . $php_path "$tlo_path\cron\keepers.php"
-            Write-Host 'Шлём отчёт'
-            # . $php_path "$tlo_path\php\actions\send_reports.php" | Out-Null
-            . $php_path "$tlo_path\cron\reports.php"
-        }
-        finally {
-            Remove-Item $lock_file -ErrorAction SilentlyContinue
+        If ( ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) + 2 ) % 2 -eq 0 -or ( $check -eq $false ) ) {
+            if ( $wait ) {
+                Write-Host 'Подождём 5 минут, вдруг быстро скачается.'
+                Start-Sleep -Seconds 300
+            }
+            New-Item -Path "$PSScriptRoot\in_progress.lck" | Out-Null
+            try {
+                Write-Host 'Обновляем БД'
+                . $php_path "$tlo_path\cron\update.php"
+                Write-Host 'Обновляем списки других хранителей'
+                . $php_path "$tlo_path\cron\keepers.php"
+                if ( $true -eq $send_rep ) {
+                    Send-Report
+                }
+            }
+            finally {
+                Remove-Item $lock_file -ErrorAction SilentlyContinue
+            }
         }
     }
     else {
@@ -538,4 +544,30 @@ function Set-Comment ( $client, $torrent, $label ) {
     $tag_url = $client.IP + ':' + $client.Port + '/api/v2/torrents/addTags'
     $tag_body = @{ hashes = $torrent.hash; tags = $label }
     Invoke-WebRequest -Method POST -Uri $tag_url -Headers $loginheader -Body $tag_body -WebSession $client.sid | Out-Null
+}
+
+function Get-ClienDetails {
+    Write-Host
+    Write-Host 'Внимание! Поддерживаются только клиенты qBittorrent!' -ForegroundColor Green
+    $client = @{}
+    $client.IP = Get-String $true 'IP-адрес веб-интерфейса клиента'
+    $client.Port = Get-String $true 'IP-порт веб-интерфейса клиента'
+    $client.Login = Get-String $true 'Логин для веб-интерфейса клиента'
+    $client.Password = Get-String $true 'Пароль для веб-интерфейса клиента'
+    return $client
+}
+
+function Get-TorrentTrackers ( $client, $hash ) {
+    $params = @{ hash = $hash }
+    $trackers = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/trackers' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json
+    return $trackers
+}
+
+function Edit-Tracker ( $client, $hash, $origUrl, $newUrl ) {
+    $params = @{
+        hash = $hash
+        origUrl = $origUrl
+        newUrl = $newUrl
+     }
+    Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/editTracker' ) -WebSession $client.sid -Body $params  -Method Post | out-null
 }

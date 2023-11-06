@@ -65,6 +65,8 @@ if ( $forum.ProxyURL -and $forum.ProxyPassword -and $forum.ProxyPassword -ne '')
 
 # подтягиваем чёрный список если нужно.
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklist = Get-Blacklist }
+
+# получаем с трекера список раздач каждого раздела
 if ( $tracker_torrents.count -eq 0 ) {
     foreach ( $section in $sections ) {
         $section_torrents = Get-SectionTorrents $forum $section $max_seeds
@@ -252,7 +254,7 @@ if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report
     Write-Output 'Ищем неактуальные раздачи.'
     $obsolete_keys = $clients_tor_sort.Keys | Where-Object { !$tracker_torrents[$_] } | Where-Object { $refreshed_ids -notcontains $clients_tor_sort[$_] } | `
         Where-Object { $tracker_torrents.Values.id -notcontains $clients_tor_sort[$_] } | Where-Object { !$ignored_obsolete -or $nul -eq $ignored_obsolete[$clients_tor_sort[$_]] }
-    $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys }
+    $obsolete_torrents = $clients_torrents | Where-Object { $_.hash -in $obsolete_keys } | Where-Object { $_.topic_id -ne '' }
     $obsolete_torrents | ForEach-Object {
         If ( !$obsolete ) { $obsolete = @{} }
         Write-Output ( "Левая раздача " + $_.topic_id + ' в клиенте ' + $clients[$_.client_key].Name )
@@ -270,10 +272,10 @@ if ( $control -eq 'Y' ) {
 }
 
 $report_flag_file = "$PSScriptRoot\report_needed.flg"
-if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) -and $send_reports -eq 'Y' -and $php_path ) {
+if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 ) -and $update_stats -eq 'Y' -and $php_path ) {
     New-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
-elseif ( $send_reports -ne 'Y' ) {
+elseif ( $update_stats -ne 'Y' -or !$php_path ) {
     Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
 
@@ -281,12 +283,12 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
 
-If ( $send_reports -eq 'Y' -and $php_path -and ( Test-Path -Path $report_flag_file ) -and ( ( Get-Date($MoscowTime) -UFormat %H ).ToInt16( $nul ) - 2 ) % 4 -eq 0 ) {
-    if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) {
-        Send-Report $true # с паузой.
+If ( Test-Path -Path $report_flag_file ) {
+    if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) { # что-то добавилось, стоит полождать.
+        Update-Stats $true $true ( $send_reports -eq 'Y' ) # с паузой и проверкой условия по чётному времени.
     }
     else {
-        Send-Report $false # без паузы, так как это сработал флаг от предыдущего прогона.
+        Update-Stats $false $true ( $send_reports -eq 'Y'  ) # без паузы, так как это сработал флаг от предыдущего прогона. Но с проверкой по чётному времени.
     }
     Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
