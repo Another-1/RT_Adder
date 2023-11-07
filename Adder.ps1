@@ -20,7 +20,8 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
 }
 
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
-    Set-Preferences
+    # $tlo_path = $max_seeds = $get_hidden = $get_blacklist = $get_news = $tg_token = $tg_chat = ''
+    Set-Preferences # $tlo_path $max_seeds $get_hidden $get_blacklist $get_news $tg_token $tg_chat
 }
 else { . "$PSScriptRoot\_settings.ps1" }
 

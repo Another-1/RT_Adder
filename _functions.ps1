@@ -336,9 +336,8 @@ function Get-UserTorrents ( $forum ) {
     return $tmp_torrents
 }
 
-function Set-Preferences {
+function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $get_news, $tg_token, $tg_chat ) {
     $tlo_path = 'C:\OpenServer\domains\webtlo.local'
-    # $php_path = 'C:\OpenServer\modules\php\PHP_8.1\php.exe'
     $max_seeds = -1
     $get_hidden = 'N'
     $get_blacklist = 'N'
@@ -395,6 +394,8 @@ function Set-Preferences {
     }
     
     Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+    Write-Host 'Настройка закончена, запустите меня ещё раз.' -ForegroundColor Green
+    Exit
 }
 
 function Get-Separator {
