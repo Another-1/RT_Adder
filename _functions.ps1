@@ -422,6 +422,15 @@ function Get-Blacklist {
     return $blacklist
 }
 
+function Get-DBHashesBySecton ( $ss ){
+    Write-Host "Запрашиваем список раздач раздела $ss из БД Web-TLO"
+    $conn = Open-Database
+    $query = "SELECT hs FROM Topics WHERE ss = $ss"
+    $topics = Invoke-SqliteQuery -Query $query -SQLiteConnection $conn
+    $conn.Close()
+    return $topics
+}
+
 function ConvertFrom-Empty( $from, $to ) {
     if ( $from -eq '') { return $to }
     else { return $from }
@@ -517,6 +526,22 @@ function  Set-Location ( $client, $torrent, $new_path, $verbose = $false) {
         $client.sid = $null
         Initialize-Client $client
         Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+}
+
+function  Set-TorrentCategory ( $client, $torrent, $category, $verbose = $false ) {
+    if ( $verbose ) { Write-Host ( 'Категоризируем ' + $torrent.name ) }
+    $data = @{
+        hashes   = $torrent.hash
+        category = $category
+    }
+    try {
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setCategory' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+    catch {
+        $client.sid = $null
+        Initialize-Client $client
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setCategory' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
 }
 
