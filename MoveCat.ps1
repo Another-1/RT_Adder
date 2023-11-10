@@ -69,7 +69,7 @@ Get-DBHashesBySecton $section_id | Select-Object hs -ExpandProperty hs | ForEach
 $client_torrents = $client_torrents | Where-Object { $db_hashes[$_.hash.toUpper()] }
 
 # Если задан старый путь - скрипт фильтрует все раздачи у которых нет в старого пути в папке сохранения
-If ( $path_from -ne '') { $client_torrents = $client_torrents | Where-Object { $_.save_path_path.notcontains( $path_from ) } }
+If ( $path_from -ne '') { $client_torrents = $client_torrents | Where-Object { $_.save_path.notcontains( $path_from ) } }
 
 # Для каждого торрента из оставшихся
 foreach ( $torrent in $client_torrents ) {
