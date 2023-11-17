@@ -88,6 +88,7 @@ if ( $tracker_torrents.count -eq 0 ) {
 }
 $clients = @{}
 if ( $nul -eq $clients_tor_sort -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) {
+    $clients = @{}
     $clients_torrents = @()
     $clients_tor_sort = @{}
     $clients_tor_srt2 = @{}
@@ -180,8 +181,10 @@ if ( $new_torrents_keys ) {
             $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
-                if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
-                $refreshed[ $client.Name] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                # if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
+                if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
+                if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
+                $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
                 $refreshed_ids += $new_tracker_data.id
             }
             # подмена временного каталога если раздача хранится на SSD.
@@ -225,8 +228,9 @@ if ( $new_torrents_keys ) {
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
-                if ( !$added[ $client.Name] ) { $added[ $client.Name] = @() }
-                $added[ $client.Name] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                if ( !$added[ $client.Name ] ) { $added[ $client.Name ] = @{} }
+                if ( !$added[ $client.Name ][ $new_tracker_data.section ] ) { $added[ $client.Name ][ $new_tracker_data.section ] = @() }
+                $added[ $client.Name][$new_tracker_data.section] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
             }
             $save_path = $section_details[$new_tracker_data.section][1]
             if ( $subfolder_kind -eq 1 ) {

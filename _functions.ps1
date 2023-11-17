@@ -12,49 +12,56 @@ function Send-TGMessage ( $message, $token, $chat_id ) {
 function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
     $message = ''
     $first = $true
-    foreach ( $key in $refreshed.Keys ) {
-        if ( !$first ) { $message += "`n`n" }
+    foreach ( $client in $refreshed.Keys ) {
+        if ( !$first ) { $message += "`n" }
         $first = $false
-        $message += "Обновлены в клиенте $key :"
-        $refreshed[$key] | ForEach-Object { $message += "`n$_" }
+        $message += "Обновлены в клиенте <b>$client</b>`n"
+        $refreshed[$client].keys | Sort-Object | ForEach-Object {
+            $message += "<i>Раздел $_</i>`n"
+            $refreshed[$client][$_] | ForEach-Object { $message += "$_`n" }
+        }
     }
 
-    if ( $message -ne '' ) { $message += "`n`n" }
+    if ( $message -ne '' ) { $message += "`n" }
+
     $first = $true
-    foreach ( $key in $added.Keys ) {
-        if ( !$first ) { $message += "`n`n" }
+    foreach ( $client in $added.Keys ) {
+        if ( !$first ) { $message += "`n" }
         $first = $false
-        $message += "Добавлены в клиент $key :"
-        $added[$key] | ForEach-Object { $message += "`n$_" }
+        $message += "Добавлены в клиент <b>$client</b>`n"
+        $added[$client].keys | Sort-Object | ForEach-Object {
+            $message += "<i>Раздел $_</i>`n"
+            $added[$client][$_] | ForEach-Object { $message += "$_`n" }
+        }
     }
 
-    if ( $message -ne '' ) { $message += "`n`n" }
+    if ( $message -ne '' ) { $message += "`n" }
     $first = $true
     foreach ( $key in $obsolete.Keys ) {
-        if ( !$first ) { $message += "`n`n" }
+        if ( !$first ) { $message += "`n" }
         $first = $false
-        $message += "Лишние в клиенте $key :"
-        $obsolete[$key] | ForEach-Object { $message += "`n$_" }
+        $message += "Лишние в клиенте $key :`n"
+        $obsolete[$key] | ForEach-Object { $message += "$_`n" }
     }
 
     Send-TGMessage $message $token $chat_id
 }
 
-function Initialize-Client ($client) {
-    if ( !$client.sid ) {
+function Initialize-Client ($client, $verbose = $true, $force = $false) {
+    if ( !$client.sid -or $force -eq $true ) {
         $logindata = @{
             username = $client.login
             password = $client.password
         }
         $loginheader = @{ Referer = 'http://' + $client.IP + ':' + $client.Port }
         try {
-            Write-Host ( 'Авторизуемся в клиенте ' + $client.Name )
+            if ( $verbose -eq $true ) { Write-Host ( 'Авторизуемся в клиенте ' + $client.Name ) }
             $url = $client.IP + ':' + $client.Port + '/api/v2/auth/login'
             $result = Invoke-WebRequest -Method POST -Uri $url -Headers $loginheader -Body $logindata -SessionVariable sid
             if ( $result.StatusCode -ne 200 ) {
                 throw 'You are banned.'
             }
-            if ( $result.Content -ne 'Ok.') {
+            if ( $result.Content.ToUpper() -ne 'OK.') {
                 throw $result.Content
             }
             $client.sid = $sid
@@ -85,7 +92,9 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
-        catch { exit }
+        catch {
+            exit
+        }
         if ( !$torrents_list ) { $torrents_list = @{} }
         return $torrents_list
     }
@@ -188,8 +197,20 @@ function Add-ClientTorrent ( $Client, $File, $Path, $Category, $Skip_checking = 
 
     # Добавляем раздачу в клиент.
     $url = $client.ip + ':' + $client.Port + '/api/v2/torrents/add'
-    try { Invoke-WebRequest -Method POST -Uri $url -WebSession $client.sid -Form $Params -ContentType 'application/x-bittorrent' | Out-Null }
-    catch { exit }
+    $added_ok = $false
+    $i = 1
+    while ( $added_ok -eq $false) {
+        try {
+            Invoke-WebRequest -Method POST -Uri $url -WebSession $client.sid -Form $Params -ContentType 'application/x-bittorrent' | Out-Null
+            $added_ok = $true
+        }
+        catch {
+            $i++
+            Initialize-Client $client $false $true
+            Start-Sleep -Seconds 1
+            Write-Host "Попытка № $i"
+        }
+    }
     Remove-Item $File
 }
 
@@ -422,7 +443,7 @@ function Get-Blacklist {
     return $blacklist
 }
 
-function Get-DBHashesBySecton ( $ss ){
+function Get-DBHashesBySecton ( $ss ) {
     Write-Host "Запрашиваем список раздач раздела $ss из БД Web-TLO"
     $conn = Open-Database
     $query = "SELECT hs FROM Topics WHERE ss = $ss"
@@ -591,9 +612,9 @@ function Get-TorrentTrackers ( $client, $hash ) {
 
 function Edit-Tracker ( $client, $hash, $origUrl, $newUrl ) {
     $params = @{
-        hash = $hash
+        hash    = $hash
         origUrl = $origUrl
-        newUrl = $newUrl
-     }
+        newUrl  = $newUrl
+    }
     Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/editTracker' ) -WebSession $client.sid -Body $params  -Method Post | out-null
 }
