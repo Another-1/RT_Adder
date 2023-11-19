@@ -278,17 +278,17 @@ if ( $control -eq 'Y' ) {
 
 $report_flag_file = "$PSScriptRoot\report_needed.flg"
 if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 ) -and $update_stats -eq 'Y' -and $php_path ) {
-    New-Item -Path $report_flag_file -ErrorAction SilentlyContinue
+    New-Item -Path $report_flag_file -ErrorAction SilentlyContinue | Out-Null
 }
 elseif ( $update_stats -ne 'Y' -or !$php_path ) {
-    Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
+    Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue | Out-Null
 }
 
 if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
 
-If ( Test-Path -Path $report_flag_file ) {
+If ( Test-Path -Path $report_flag_file | Out-Null ) {
     if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) { # что-то добавилось, стоит полождать.
         Update-Stats $true $true ( $send_reports -eq 'Y' ) # с паузой и проверкой условия по чётному времени.
     }
