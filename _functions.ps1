@@ -49,24 +49,29 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
     else {
         # краткая сводка в ТГ
         $message = ''
-        $first = $true
-        $keys = ( $refrehed.keys + $added.keys + $obsolete.Keys ) | Sort-Object -Unique
+        $keys = (  $refrehed.keys + $added.keys + $obsolete.Keys ) | Sort-Object -Unique
         foreach ( $client in $keys ) {
             if ( $message -ne '' ) { $message += "`n" }
-            $message += "Клиент <b>$client</b>`n"
-            if ( $refreshed[$client] ) {
+            $message += "<u>Клиент <b>$client</b></u>`n"
+            if ( $refreshed -and $refreshed[$client] ) {
+                $first = $true
                 $refreshed[$client].keys | Sort-Object | ForEach-Object {
+                    if ( $message -ne '' ) { $message += "`n" }
                     $message += "<i>Раздел $_</i>`n"
                     $message += ( "Обновлено: " + $refreshed[$client][$_].count + "`n")
                 }
             }
-            if ( $added[$client] ) {
+            if ( !$first ) { $message += "`n" }
+            if ( $added -and $added[$client] ) {
+                $first = $true
                 $added[$client].keys | Sort-Object | ForEach-Object {
+                    if ( $message -ne '' ) { $message += "`n" }
                     $message += "<i>Раздел $_</i>`n"
                     $message += ( "Добавлено: " + $added[$client][$_].count + "`n")
                 }
             }
-            if ( $obsolete[$client] ) {
+            if ( !$first ) { $message += "`n" }
+            if ( $obsolete -and $obsolete[$client] ) {
                 $message += ( "Лишних: " + $obsolete[$client].count + "`n" )
             }
         }
