@@ -288,7 +288,7 @@ if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -an
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
 
-If ( Test-Path -Path $report_flag_file | Out-Null ) {
+If ( Test-Path -Path $report_flag_file ) {
     if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) { # что-то добавилось, стоит полождать.
         Update-Stats $true $true ( $send_reports -eq 'Y' ) # с паузой и проверкой условия по чётному времени.
     }
