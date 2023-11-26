@@ -284,7 +284,7 @@ elseif ( $update_stats -ne 'Y' -or !$php_path ) {
     Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue | Out-Null
 }
 
-if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -and $tg_token -ne '' -and $tg_chat -ne '' ) {
+if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -or $notify_nowork -eq 'Y' ) -and $tg_token -ne '' -and $tg_chat -ne '' ) {
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
 

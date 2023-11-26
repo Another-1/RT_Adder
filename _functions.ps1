@@ -10,73 +10,79 @@ function Send-TGMessage ( $message, $token, $chat_id ) {
 }
 
 function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
-    if ( $brief_reports -ne 'Y') {
-        # полная сводка в ТГ
-        $message = ''
-        $first = $true
-        foreach ( $client in $refreshed.Keys ) {
-            if ( !$first ) { $message += "`n" }
-            $first = $false
-            $message += "Обновлены в клиенте <b>$client</b>`n"
-            $refreshed[$client].keys | Sort-Object | ForEach-Object {
-                $message += "<i>Раздел $_</i>`n"
-                $refreshed[$client][$_] | ForEach-Object { $message += "$_`n" }
+    if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 ) {
+        if ( $brief_reports -ne 'Y') {
+            # полная сводка в ТГ
+            $message = ''
+            $first = $true
+            foreach ( $client in $refreshed.Keys ) {
+                if ( !$first ) { $message += "`n" }
+                $first = $false
+                $message += "Обновлены в клиенте <b>$client</b>`n"
+                $refreshed[$client].keys | Sort-Object | ForEach-Object {
+                    $message += "<i>Раздел $_</i>`n"
+                    $refreshed[$client][$_] | ForEach-Object { $message += "$_`n" }
+                }
+            }
+
+            if ( $message -ne '' ) { $message += "`n" }
+
+            $first = $true
+            foreach ( $client in $added.Keys ) {
+                if ( !$first ) { $message += "`n" }
+                $first = $false
+                $message += "Добавлены в клиент <b>$client</b>`n"
+                $added[$client].keys | Sort-Object | ForEach-Object {
+                    $message += "<i>Раздел $_</i>`n"
+                    $added[$client][$_] | ForEach-Object { $message += "$_`n" }
+                }
+            }
+
+            if ( $message -ne '' ) { $message += "`n" }
+            $first = $true
+            foreach ( $key in $obsolete.Keys ) {
+                if ( !$first ) { $message += "`n" }
+                $first = $false
+                $message += "Лишние в клиенте $key :`n"
+                $obsolete[$key] | ForEach-Object { $message += "$_`n" }
             }
         }
-
-        if ( $message -ne '' ) { $message += "`n" }
-
-        $first = $true
-        foreach ( $client in $added.Keys ) {
-            if ( !$first ) { $message += "`n" }
-            $first = $false
-            $message += "Добавлены в клиент <b>$client</b>`n"
-            $added[$client].keys | Sort-Object | ForEach-Object {
-                $message += "<i>Раздел $_</i>`n"
-                $added[$client][$_] | ForEach-Object { $message += "$_`n" }
+        else {
+            # краткая сводка в ТГ
+            $message = ''
+            $keys = (  $refrehed.keys + $added.keys + $obsolete.Keys ) | Sort-Object -Unique
+            foreach ( $client in $keys ) {
+                if ( $message -ne '' ) { $message += "`n" }
+                $message += "<u>Клиент <b>$client</b></u>`n"
+                if ( $refreshed -and $refreshed[$client] ) {
+                    $first = $true
+                    $refreshed[$client].keys | Sort-Object | ForEach-Object {
+                        if ( $message -ne '' ) { $message += "`n" }
+                        $message += "<i>Раздел $_</i>`n"
+                        $message += ( "Обновлено: " + $refreshed[$client][$_].count + "`n")
+                    }
+                }
+                if ( !$first ) { $message += "`n" }
+                if ( $added -and $added[$client] ) {
+                    $first = $true
+                    $added[$client].keys | Sort-Object | ForEach-Object {
+                        if ( $message -ne '' ) { $message += "`n" }
+                        $message += "<i>Раздел $_</i>`n"
+                        $message += ( "Добавлено: " + $added[$client][$_].count + "`n")
+                    }
+                }
+                if ( !$first ) { $message += "`n" }
+                if ( $obsolete -and $obsolete[$client] ) {
+                    $message += ( "Лишних: " + $obsolete[$client].count + "`n" )
+                }
             }
         }
-
-        if ( $message -ne '' ) { $message += "`n" }
-        $first = $true
-        foreach ( $key in $obsolete.Keys ) {
-            if ( !$first ) { $message += "`n" }
-            $first = $false
-            $message += "Лишние в клиенте $key :`n"
-            $obsolete[$key] | ForEach-Object { $message += "$_`n" }
-        }
+        Send-TGMessage $message $token $chat_id
     }
     else {
-        # краткая сводка в ТГ
-        $message = ''
-        $keys = (  $refrehed.keys + $added.keys + $obsolete.Keys ) | Sort-Object -Unique
-        foreach ( $client in $keys ) {
-            if ( $message -ne '' ) { $message += "`n" }
-            $message += "<u>Клиент <b>$client</b></u>`n"
-            if ( $refreshed -and $refreshed[$client] ) {
-                $first = $true
-                $refreshed[$client].keys | Sort-Object | ForEach-Object {
-                    if ( $message -ne '' ) { $message += "`n" }
-                    $message += "<i>Раздел $_</i>`n"
-                    $message += ( "Обновлено: " + $refreshed[$client][$_].count + "`n")
-                }
-            }
-            if ( !$first ) { $message += "`n" }
-            if ( $added -and $added[$client] ) {
-                $first = $true
-                $added[$client].keys | Sort-Object | ForEach-Object {
-                    if ( $message -ne '' ) { $message += "`n" }
-                    $message += "<i>Раздел $_</i>`n"
-                    $message += ( "Добавлено: " + $added[$client][$_].count + "`n")
-                }
-            }
-            if ( !$first ) { $message += "`n" }
-            if ( $obsolete -and $obsolete[$client] ) {
-                $message += ( "Лишних: " + $obsolete[$client].count + "`n" )
-            }
-        }
+        $message = 'Ничего делать не понадобилось'
+        Send-TGMessage $message $token $chat_id
     }
-    Send-TGMessage $message $token $chat_id
 }
 
 function Initialize-Client ($client, $verbose = $true, $force = $false) {
