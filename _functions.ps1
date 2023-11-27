@@ -20,7 +20,7 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
                 $first = $false
                 $message += "Обновлены в клиенте <b>$client</b>`n"
                 $refreshed[$client].keys | Sort-Object | ForEach-Object {
-                    $message += "<i>Раздел $_</i>`n"
+                    # $message += "<i>Раздел $_</i>`n"
                     $refreshed[$client][$_] | ForEach-Object { $message += "$_`n" }
                 }
             }
@@ -33,18 +33,18 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
                 $first = $false
                 $message += "Добавлены в клиент <b>$client</b>`n"
                 $added[$client].keys | Sort-Object | ForEach-Object {
-                    $message += "<i>Раздел $_</i>`n"
+                    # $message += "<i>Раздел $_</i>`n"
                     $added[$client][$_] | ForEach-Object { $message += "$_`n" }
                 }
             }
 
             if ( $message -ne '' ) { $message += "`n" }
             $first = $true
-            foreach ( $key in $obsolete.Keys ) {
+            foreach ( $client in $obsolete.Keys ) {
                 if ( !$first ) { $message += "`n" }
                 $first = $false
-                $message += "Лишние в клиенте $key :`n"
-                $obsolete[$key] | ForEach-Object { $message += "$_`n" }
+                $message += "Лишние в клиенте $client :`n"
+                $obsolete[$client] | ForEach-Object { $message += "$_`n" }
             }
         }
         else {
@@ -53,25 +53,25 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
             $keys = (  $refrehed.keys + $added.keys + $obsolete.Keys ) | Sort-Object -Unique
             foreach ( $client in $keys ) {
                 if ( $message -ne '' ) { $message += "`n" }
-                $message += "<u>Клиент <b>$client</b></u>`n"
+                $message += "<u>Клиент <b>$client</b></u>"
                 if ( $refreshed -and $refreshed[$client] ) {
-                    $first = $true
+                    # $first = $true
                     $refreshed[$client].keys | Sort-Object | ForEach-Object {
                         if ( $message -ne '' ) { $message += "`n" }
-                        $message += "<i>Раздел $_</i>`n"
+                        # $message += "<i>Раздел $_</i>`n"
                         $message += ( "Обновлено: " + $refreshed[$client][$_].count + "`n")
                     }
                 }
-                if ( !$first ) { $message += "`n" }
+                # if ( !$first ) { $message += "`n" }
                 if ( $added -and $added[$client] ) {
                     $first = $true
                     $added[$client].keys | Sort-Object | ForEach-Object {
                         if ( $message -ne '' ) { $message += "`n" }
-                        $message += "<i>Раздел $_</i>`n"
+                        # $message += "<i>Раздел $_</i>`n"
                         $message += ( "Добавлено: " + $added[$client][$_].count + "`n")
                     }
                 }
-                if ( !$first ) { $message += "`n" }
+                # if ( !$first ) { $message += "`n" }
                 if ( $obsolete -and $obsolete[$client] ) {
                     $message += ( "Лишних: " + $obsolete[$client].count + "`n" )
                 }
