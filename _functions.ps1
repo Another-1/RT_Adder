@@ -53,7 +53,7 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
             $keys = (  $refrehed.keys + $added.keys + $obsolete.Keys ) | Sort-Object -Unique
             foreach ( $client in $keys ) {
                 if ( $message -ne '' ) { $message += "`n" }
-                $message += "<u>Клиент <b>$client</b></u>"
+                $message += "<u>Клиент <b>$client</b></u>`n"
                 if ( $refreshed -and $refreshed[$client] ) {
                     # $first = $true
                     $refreshed[$client].keys | Sort-Object | ForEach-Object {
@@ -64,9 +64,9 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
                 }
                 # if ( !$first ) { $message += "`n" }
                 if ( $added -and $added[$client] ) {
-                    $first = $true
+                    # $first = $true
                     $added[$client].keys | Sort-Object | ForEach-Object {
-                        if ( $message -ne '' ) { $message += "`n" }
+                        # if ( $message -ne '' ) { $message += "`n" }
                         # $message += "<i>Раздел $_</i>`n"
                         $message += ( "Добавлено: " + $added[$client][$_].count + "`n")
                     }

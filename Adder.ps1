@@ -71,7 +71,7 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklis
 if ( $tracker_torrents.count -eq 0 ) {
     foreach ( $section in $sections ) {
         $section_torrents = Get-SectionTorrents $forum $section $max_seeds
-        $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10, 11 ) } | ForEach-Object {
+        $section_torrents.Keys | Where-Object { $section_torrents[$_][0] -in (0, 2, 3, 8, 10 ) } | ForEach-Object {
             $tracker_torrents[$section_torrents[$_][7]] = @{
                 id             = $_
                 section        = $section.ToInt32($nul)
