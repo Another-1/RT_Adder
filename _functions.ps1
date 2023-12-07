@@ -222,6 +222,12 @@ function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
     if ( $nul -eq $save_path ) { return Get-Item $Path }
 }
 
+function Start-Rehash ( $client, $hash ) {
+    $Params = @{ hashes = $hash }
+    $url = $client.ip + ':' + $client.Port + '/api/v2/torrents/recheck'
+    Invoke-WebRequest -Method POST -Uri $url -WebSession $client.sid -Form $Params -ContentType 'application/x-bittorrent' | Out-Null
+}
+
 function Add-ClientTorrent ( $Client, $File, $Path, $Category, $Skip_checking = $false ) {
     $Params = @{
         torrents      = Get-Item $File
@@ -462,11 +468,16 @@ function Get-Separator {
     return $separator
 }
 
-function  Open-Database {
+function  Open-Database( $db_path ) {
+    Write-Host 'Путь к базе данных:' $db_path
+    $conn = New-SqliteConnection -DataSource $db_path
+    return $conn
+}
+
+function  Open-TLODatabase {
     $sepa = Get-Separator
     $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
-    Write-Host 'Путь к базе данных:' $database_path
-    $conn = New-SqliteConnection -DataSource $database_path
+    $conn = Open-Database $database_path
     return $conn
 }
 
@@ -474,7 +485,7 @@ function Get-Blacklist {
     Write-Host 'Запрашиваем чёрный список из БД Web-TLO'
     $blacklist = @{}
     # $sepa = Get-Separator
-    $conn = Open-Database
+    $conn = Open-TLODatabase
     $query = 'SELECT info_hash FROM TopicsExcluded'
     Invoke-SqliteQuery -Query $query -SQLiteConnection $conn | ForEach-Object { $blacklist[$_.info_hash] = 1 }
     $conn.Close()
@@ -483,7 +494,7 @@ function Get-Blacklist {
 
 function Get-DBHashesBySecton ( $ss ) {
     Write-Host "Запрашиваем список раздач раздела $ss из БД Web-TLO"
-    $conn = Open-Database
+    $conn = Open-TLODatabase
     $query = "SELECT hs FROM Topics WHERE ss = $ss"
     $topics = Invoke-SqliteQuery -Query $query -SQLiteConnection $conn
     $conn.Close()
@@ -572,7 +583,7 @@ function Get-Disk ( $obligatory, $prompt ) {
 }
 
 
-function  Set-Location ( $client, $torrent, $new_path, $verbose = $false) {
+function  Set-SaveLocation ( $client, $torrent, $new_path, $verbose = $false) {
     if ( $verbose ) { Write-Host ( 'Перемещаем ' + $torrent.name ) }
     $data = @{
         hashes   = $torrent.hash
@@ -655,4 +666,17 @@ function Edit-Tracker ( $client, $hash, $origUrl, $newUrl ) {
         newUrl  = $newUrl
     }
     Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/editTracker' ) -WebSession $client.sid -Body $params  -Method Post | out-null
+}
+
+Function Get-ClientSetting( $client, $setting ) {
+    $url = $client.ip + ':' + $client.Port + '/api/v2/app/preferences'
+    $result = ( ( Invoke-WebRequest -Uri $url -WebSession $client.sid ).content | ConvertFrom-Json ).$setting
+    return $result
+}
+
+Function Set-ClientSetting ( $client, $param, $value ) {
+    $url = $client.ip + ':' + $client.Port + '/api/v2/app/setPreferences'
+    $param = @{ json = ( @{ $param = $value } | ConvertTo-Json -Compress ) }
+    Invoke-WebRequest -Uri $url -WebSession $client.sid -Body $param -Method POST | Out-Null
+
 }

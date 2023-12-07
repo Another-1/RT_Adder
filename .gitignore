@@ -8,3 +8,4 @@ in_progress.lck
 *.torrent
 Aligner.ps1
 report_needed.flg
+rehashes.db

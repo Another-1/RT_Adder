@@ -20,7 +20,6 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
 }
 
 If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
-    # $tlo_path = $max_seeds = $get_hidden = $get_blacklist = $get_news = $tg_token = $tg_chat = ''
     Set-Preferences # $tlo_path $max_seeds $get_hidden $get_blacklist $get_news $tg_token $tg_chat
 }
 else { . "$PSScriptRoot\_settings.ps1" }
@@ -86,7 +85,7 @@ if ( $tracker_torrents.count -eq 0 ) {
         }
     }
 }
-$clients = @{}
+# $clients = @{}
 if ( $nul -eq $clients_tor_sort -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) {
     $clients = @{}
     $clients_torrents = @()
@@ -163,9 +162,6 @@ if ( $new_torrents_keys ) {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
             if (!$client) {
                 $client = $clients[$section_details[$new_tracker_data.section][0].ToString()]
-                # If ( $get_news -eq 'Y') {
-                #     Write-Output ( "Для раздачи " + $new_tracker_data.id + ' выбран клиент ' + $client.Name )
-                # }
             }
         }
         
@@ -178,27 +174,37 @@ if ( $new_torrents_keys ) {
         if ( $existing_torrent ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
+            $on_ssd = ( $nul -ne $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] )
             $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
-                # if ( !$refreshed[ $client.Name] ) { $refreshed[ $client.Name] = @() }
                 if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
                 if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
-                $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                if ( $ssd ) {
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD' : ' HDD' ) )
+                }
                 $refreshed_ids += $new_tracker_data.id
             }
             # подмена временного каталога если раздача хранится на SSD.
-            if ( $nul -ne $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] ) {
-                $url_get = $client.ip + ':' + $client.Port + '/api/v2/app/preferences'
-                $old_temp_path = ( ( Invoke-WebRequest -Uri $url_get -WebSession $client.sid ).content | ConvertFrom-Json ).temp_path
-                if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
-                    Write-Output ( 'Временно меняем temp path на ' + $existing_torrent.save_path[0] + ':\Incomplete' )
-                    $url_set = $client.ip + ':' + $client.Port + '/api/v2/app/setPreferences'
-                    $param = @{ json = ( @{"temp_path" = ( $existing_torrent.save_path[0] + ':\Incomplete') } | ConvertTo-Json -Compress ) }
-                    Invoke-WebRequest -Uri $url_set -WebSession $client.sid -Body $param -Method POST
-                    Start-Sleep -Seconds 1
+            if ( $on_ssd ) {
+                if ( !$client.temp_enabled ) {
+                    $client.temp_enabled = Get-ClientSetting $client 'temp_path_enabled'
+                    $clients[$section_details[$new_tracker_data.section][0]].temp_enabled = $client.temp_enabled
                 }
-                else { Remove-Variable -Name old_temp_path -ErrorAction SilentlyContinue }
+                if ( $client.temp_enabled -eq $true ) { 
+                    $old_temp_path = Get-ClientSetting $client 'temp_path'
+                    if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
+                        Write-Output ( 'Временно меняем temp path на ' + $existing_torrent.save_path[0] + ':\Incomplete' )
+                        Set-ClientSetting $client 'temp_path' ( $existing_torrent.save_path[0] + ':\Incomplete' )
+                        Write-Output 'Отключаем преаллокацию'
+                        Set-ClientSetting $client 'preallocate_all' $false
+                        Start-Sleep -Seconds 1
+                    }
+                    else { Remove-Variable -Name old_temp_path -ErrorAction SilentlyContinue }
+                }
+            }
+            else {
+                Set-ClientSetting $client 'preallocate_all' $true
             }
             Add-ClientTorrent $client $new_torrent_file $existing_torrent.save_path $existing_torrent.category
 
@@ -239,7 +245,17 @@ if ( $new_torrents_keys ) {
             elseif ( $subfolder_kind -eq 2 ) {
                 $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
+            $on_ssd = ( $nul -ne $ssd -and $save_path[0] -in $ssd[$section_details[$new_tracker_data.section][0]] )
+            if ( $ssd -and $ssd[$section_details[$new_tracker_data.section][0]] -and ( $on_ssd -eq $false )) {
+                Set-ClientSetting $client 'temp_path' ( $ssd[$section_details[$new_tracker_data.section][0]][0] + ':\Incomplete' )
+                Set-ClientSetting $client 'temp_path_enabled' $true
+                Set-ClientSetting $client 'preallocate_all' $false
+            }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
+            if (
+                $on_ssd -eq $false) { Set-ClientSetting $client 'temp_path_enabled' $false
+                Set-ClientSetting $client 'preallocate_all' $true
+            }
         }
         elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s ).ToInt32($nul) - $min_days * 86400 ) ) {
             Write-Output ( 'Раздача ' + $new_tracker_data.id + ' слишком новая.' )
@@ -289,7 +305,8 @@ if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -
 }
 
 If ( Test-Path -Path $report_flag_file ) {
-    if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) { # что-то добавилось, стоит полождать.
+    if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) {
+        # что-то добавилось, стоит полождать.
         Update-Stats $true $true ( $send_reports -eq 'Y' ) # с паузой и проверкой условия по чётному времени.
     }
     else {
