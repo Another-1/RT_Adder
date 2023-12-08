@@ -181,38 +181,43 @@ if ( $new_torrents_keys ) {
                 if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
                 if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
                 if ( $ssd ) {
-                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD' : ' HDD' ) + $existing_torrent.save_path[0] )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + $existing_torrent.save_path[0] )
                 }
                 else {
-                        $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
                 }
                 $refreshed_ids += $new_tracker_data.id
             }
             # подмена временного каталога если раздача хранится на SSD.
-            if ( $ssd -and $on_ssd -eq $true ) {
-                # if ( !$client.temp_enabled ) {
-                #     $client.temp_enabled = Get-ClientSetting $client 'temp_path_enabled'
-                #     $clients[$section_details[$new_tracker_data.section][0]].temp_enabled = $client.temp_enabled
-                # }
-                # if ( $client.temp_enabled -eq $true ) { 
-                #     $old_temp_path = Get-ClientSetting $client 'temp_path'
-                #     if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
-                # Write-Output ( 'Временно меняем temp path на ' + $existing_torrent.save_path[0] + ':\Incomplete' )
-                # Set-ClientSetting $client 'temp_path' ( $existing_torrent.save_path[0] + ':\Incomplete' )
-                Write-Output 'Отключаем преаллокацию'
-                Set-ClientSetting $client 'preallocate_all' $false
-                Start-Sleep -Seconds 1
-                # }
-                # else { Remove-Variable -Name old_temp_path -ErrorAction SilentlyContinue }
-                # }
-            }
-            else {
-                Set-ClientSetting $client 'preallocate_all' $true
+            if ( $ssd ) {
+                if ( $on_ssd -eq $true ) {
+                    # if ( !$client.temp_enabled ) {
+                    #     $client.temp_enabled = Get-ClientSetting $client 'temp_path_enabled'
+                    #     $clients[$section_details[$new_tracker_data.section][0]].temp_enabled = $client.temp_enabled
+                    # }
+                    # if ( $client.temp_enabled -eq $true ) { 
+                    #     $old_temp_path = Get-ClientSetting $client 'temp_path'
+                    #     if ( $old_temp_path[0] -ne $existing_torrent.save_path[0] ) {
+                    # Write-Output ( 'Временно меняем temp path на ' + $existing_torrent.save_path[0] + ':\Incomplete' )
+                    # Set-ClientSetting $client 'temp_path' ( $existing_torrent.save_path[0] + ':\Incomplete' )
+                    Write-Output 'Отключаем преаллокацию'
+                    Set-ClientSetting $client 'preallocate_all' $false
+                    Start-Sleep -Seconds 1
+                    Start-Sleep -Milliseconds 100
+                    # }
+                    # else { Remove-Variable -Name old_temp_path -ErrorAction SilentlyContinue }
+                    # }
+                }
+                else {
+                    Set-ClientSetting $client 'preallocate_all' $true
+                    Start-Sleep -Milliseconds 100
+                }
+                Set-ClientSetting $client 'temp_path_enabled' $false
             }
             Add-ClientTorrent $client $new_torrent_file $existing_torrent.save_path $existing_torrent.category
-            if ( $on_ssd -eq $true ) {
-                Set-ClientSetting $client 'preallocate_all' $true
-            }
+            # if ( $on_ssd -eq $true ) {
+            #     Set-ClientSetting $client 'preallocate_all' $true
+            # }
             While ($true) {
                 Write-Output 'Ждём 5 секунд чтобы раздача точно "подхватилась"'
                 Start-Sleep -Seconds 5
@@ -250,17 +255,23 @@ if ( $new_torrents_keys ) {
             elseif ( $subfolder_kind -eq 2 ) {
                 $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }
-            $on_ssd = ( $nul -ne $ssd -and $save_path[0] -in $ssd[$section_details[$new_tracker_data.section][0]] )
-            if ( $ssd -and $ssd[$section_details[$new_tracker_data.section][0]] -and ( $on_ssd -eq $false )) {
-                Set-ClientSetting $client 'temp_path' ( $ssd[$section_details[$new_tracker_data.section][0]][0] + ':\Incomplete' )
-                Set-ClientSetting $client 'temp_path_enabled' $true
-                Set-ClientSetting $client 'preallocate_all' $false
+            $on_ssd = ( $ssd -and $save_path[0] -in $ssd[$section_details[$new_tracker_data.section][0]] )
+            if ( $ssd -and $ssd[$section_details[$new_tracker_data.section][0]] ) {
+                if ( $on_ssd -eq $false ) {
+                    Set-ClientSetting $client 'temp_path' ( $ssd[$section_details[$new_tracker_data.section][0]][0] + ':\Incomplete' )
+                    Set-ClientSetting $client 'temp_path_enabled' $true
+                    Set-ClientSetting $client 'preallocate_all' $false
+                }
+                else {
+                    Set-ClientSetting $client 'temp_path_enabled' $false
+                    Set-ClientSetting $client 'preallocate_all' $false
+                }
             }
             Add-ClientTorrent $client $new_torrent_file $save_path $section_details[$new_tracker_data.section][4]
-            if ( $on_ssd -eq $false) {
-                Set-ClientSetting $client 'temp_path_enabled' $false
-                Set-ClientSetting $client 'preallocate_all' $true
-            }
+            # if ( $on_ssd -eq $false) {
+            #     Set-ClientSetting $client 'temp_path_enabled' $false
+            #     Set-ClientSetting $client 'preallocate_all' $true
+            # }
         }
         elseif ( !$existing_torrent -eq 'Y' -and $get_news -eq 'Y' -and $new_tracker_data.reg_time -ge ( ( Get-Date -UFormat %s ).ToInt32($nul) - $min_days * 86400 ) ) {
             Write-Output ( 'Раздача ' + $new_tracker_data.id + ' слишком новая.' )
