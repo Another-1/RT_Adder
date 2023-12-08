@@ -60,9 +60,9 @@ Invoke-SqliteQuery -Query 'SELECT * FROM rehash_dates' -SQLiteConnection $conn |
 $full_data_sorted = [System.Collections.ArrayList]::new()
 Write-Output 'Ищем раздачи из клиентов в БД рехэшей'
 $clients_torrents | ForEach-Object {
-    Write-Output ( 'хэш = ' + $_.hash + ', инфохэш_в1 = ' + $_.infohash_v1 )
+    # Write-Output ( 'хэш = ' + $_.hash + ', инфохэш_в1 = ' + $_.infohash_v1 )
     if ( !$_.infohash_v1 -or $nul -eq $_.infohash_v1 -or $_.infohash_v1 -eq '' ) { $_.infohash_v1 = $_.hash }
-    Write-Output ( 'будем использовать ' + $_.infohash_v1 )
+    # Write-Output ( 'будем использовать ' + $_.infohash_v1 )
     $full_data_sorted.Add( [PSCustomObject]@{ hash = $_.infohash_v1; rehash_date = $( $null -ne $db_data[$_.infohash_v1] -and $db_data[$_.infohash_v1] -gt 0 ? $db_data[$_.infohash_v1] : 0 ); client_key = $_.client_key; size = $_.size } ) | Out-Null
 }
 Write-Output 'Сортируем всё по дате рехэша и размеру'
