@@ -71,7 +71,7 @@ $full_data_sorted = $full_data_sorted | Sort-Object -Descending -Property size |
 $sum_cnt = 0
 $sum_size = 0
 $full_data_sorted | ForEach-Object {
-    Write-Output ( 'Отправляем в рехэш ' + $_.name )
+    Write-Output ( 'Отправляем в рехэш ' + $_.name + ' в клиенте ' + $clients[$_.client_key].Name )
     Start-Rehash $clients[$_.client_key] $_.hash
     if ( !$db_data[$_.hash] ) {
         Invoke-SqliteQuery -Query "INSERT INTO rehash_dates (hash, rehash_date) VALUES (@hash, @epoch )" -SqlParameters @{ hash = $_.hash; epoch = ( Get-Date -UFormat %s ) }-SQLiteConnection $conn
