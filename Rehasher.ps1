@@ -63,7 +63,7 @@ $clients_torrents | ForEach-Object {
     # Write-Output ( 'хэш = ' + $_.hash + ', инфохэш_в1 = ' + $_.infohash_v1 )
     if ( !$_.infohash_v1 -or $nul -eq $_.infohash_v1 -or $_.infohash_v1 -eq '' ) { $_.infohash_v1 = $_.hash }
     # Write-Output ( 'будем использовать ' + $_.infohash_v1 )
-    $full_data_sorted.Add( [PSCustomObject]@{ hash = $_.infohash_v1; rehash_date = $( $null -ne $db_data[$_.infohash_v1] -and $db_data[$_.infohash_v1] -gt 0 ? $db_data[$_.infohash_v1] : 0 ); client_key = $_.client_key; size = $_.size } ) | Out-Null
+    $full_data_sorted.Add( [PSCustomObject]@{ hash = $_.infohash_v1; rehash_date = $( $null -ne $db_data[$_.infohash_v1] -and $db_data[$_.infohash_v1] -gt 0 ? $db_data[$_.infohash_v1] : 0 ); client_key = $_.client_key; size = $_.size; name = $_.name } ) | Out-Null
 }
 Write-Output 'Сортируем всё по дате рехэша и размеру'
 $full_data_sorted = $full_data_sorted | Sort-Object -Descending -Property size | Sort-Object -Property rehash_date -Stable
@@ -71,6 +71,7 @@ $full_data_sorted = $full_data_sorted | Sort-Object -Descending -Property size |
 $sum_cnt = 0
 $sum_size = 0
 $full_data_sorted | ForEach-Object {
+    Write-Output ( 'Отправляем в рехэш ' + $_.name )
     Start-Rehash $clients[$_.client_key] $_.hash
     if ( !$db_data[$_.hash] ) {
         Invoke-SqliteQuery -Query "INSERT INTO rehash_dates (hash, rehash_date) VALUES (@hash, @epoch )" -SqlParameters @{ hash = $_.hash; epoch = ( Get-Date -UFormat %s ) }-SQLiteConnection $conn
