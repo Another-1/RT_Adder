@@ -133,7 +133,7 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, 
         catch {
             exit
         }
-        if ( !$torrents_list ) { $torrents_list = @{} }
+        if ( !$torrents_list ) { $torrents_list = @() }
         return $torrents_list
     }
 }
