@@ -24,6 +24,17 @@ If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
 }
 else { . "$PSScriptRoot\_settings.ps1" }
 
+If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
+    . "$PSScriptRoot\_masks.ps1"
+    $masks_enriched = @{}
+    $masks.GetEnumerator() | ForEach-Object {
+        $masks_enriched[$_.Key] = $masks[$_.key] -replace('^|$|\s',  '*')
+    }
+}
+else {
+    Remove-Variable -name masks_enriched
+}
+
 Write-Output 'Читаем настройки Web-TLO'
 
 $ini_path = $tlo_path + '\data\config.ini'
@@ -75,7 +86,7 @@ if ( $tracker_torrents.count -eq 0 ) {
                 id             = $_
                 section        = $section.ToInt32($nul)
                 status         = $section_torrents[$_][0]
-                name           = $nul
+                name           = $null
                 reg_time       = $section_torrents[$_][2]
                 size           = $section_torrents[$_][3]
                 seeders        = $section_torrents[$_][1]
@@ -239,6 +250,22 @@ if ( $new_torrents_keys ) {
             Start-Sleep -Milliseconds 100
         }
         elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_secs ) ) -or $new_tracker_data.status -eq 2 ) ) {
+            $is_ok = $true
+            if ( $masks_enriched -and $masks_enriched[$new_tracker_data.section.ToString()] ) {
+                $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
+
+                $is_ok = $false
+                $masks_enriched[$new_tracker_data.section] | ForEach-Object {
+                    if ( $new_tracker_data.name -like $_ ) {
+                        $is_ok = $true
+                        break
+                    }
+                }
+            }
+            if ( -not $is_ok ) {
+                Write-Output ( 'Раздача ' + $new_tracker_data.name + ' отброшена фильтрами' )
+                continue
+            }
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name

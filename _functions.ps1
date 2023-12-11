@@ -659,6 +659,15 @@ function Get-TorrentTrackers ( $client, $hash ) {
     return $trackers
 }
 
+function Get-TorrentName ( $id ) {
+    $params = @{ 
+        by  = 'topic_id'
+        val = $id 
+    }
+    $name = ( ( Invoke-WebRequest -uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id.topic_title
+    return $name
+}
+
 function Edit-Tracker ( $client, $hash, $origUrl, $newUrl ) {
     $params = @{
         hash    = $hash
