@@ -32,7 +32,7 @@ If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
     }
 }
 else {
-    Remove-Variable -name masks_enriched
+    Remove-Variable -name masks_enriched -ErrorAction SilentlyContinue
 }
 
 Write-Output 'Читаем настройки Web-TLO'
