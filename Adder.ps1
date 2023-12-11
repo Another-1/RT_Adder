@@ -255,10 +255,9 @@ if ( $new_torrents_keys ) {
                 $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
 
                 $is_ok = $false
-                $masks_enriched[$new_tracker_data.section] | ForEach-Object {
-                    if ( $new_tracker_data.name -like $_ ) {
+                $masks_enriched[$new_tracker_data.section.ToString()] | ForEach-Object {
+                    if ( -not $is_ok -and $new_tracker_data.name -like $_ ) {
                         $is_ok = $true
-                        break
                     }
                 }
             }
