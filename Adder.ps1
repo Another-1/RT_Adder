@@ -25,6 +25,7 @@ If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
 else { . "$PSScriptRoot\_settings.ps1" }
 
 If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
+    Write-Output 'Подтягиваем названия раздач из маскированных разделов'
     . "$PSScriptRoot\_masks.ps1"
     $masks_db = @{}
     $masks_like = @{}
