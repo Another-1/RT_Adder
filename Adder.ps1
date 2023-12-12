@@ -26,13 +26,20 @@ else { . "$PSScriptRoot\_settings.ps1" }
 
 If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
     . "$PSScriptRoot\_masks.ps1"
-    $masks_enriched = @{}
+    $masks_db = @{}
+    $masks_like = @{}
+    $conn = Open-TLODatabase
     $masks.GetEnumerator() | ForEach-Object {
-        $masks_enriched[$_.Key] = $masks[$_.key] -replace('^|$|\s',  '*')
+        $mask_ht = `
+        ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_.Key + ' AND na NOT LIKE "%' + ( ($masks[$_.Key] -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn ).GetEnumerator() | ForEach-Object { @{$_.id.ToString() = 1 } }
+        $masks_db[$_.key] = $mask_ht
+        $masks_like[$_.key] = $masks[$_.key] -replace ('^|$|\s', '*')
     }
+    $conn.Close()
 }
 else {
-    Remove-Variable -name masks_enriched -ErrorAction SilentlyContinue
+    Remove-Variable -name masks_like -ErrorAction SilentlyContinue
+    Remove-Variable -name masks_db -ErrorAction SilentlyContinue
 }
 
 Write-Output 'Читаем настройки Web-TLO'
@@ -251,13 +258,15 @@ if ( $new_torrents_keys ) {
         }
         elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_secs ) ) -or $new_tracker_data.status -eq 2 ) ) {
             $is_ok = $true
-            if ( $masks_enriched -and $masks_enriched[$new_tracker_data.section.ToString()] ) {
-                $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
-
-                $is_ok = $false
-                $masks_enriched[$new_tracker_data.section.ToString()] | ForEach-Object {
-                    if ( -not $is_ok -and $new_tracker_data.name -like $_ ) {
-                        $is_ok = $true
+            if ( $masks_db -and $masks_db[$new_tracker_data.section.ToString()] -and $masks_db[$new_tracker_data.section.ToString()][$new_tracker_data.id] ) { $is_ok = $false }
+            else {
+                if ( $masks_like -and $masks_like[$new_tracker_data.section.ToString()] ) {
+                    $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
+                    $is_ok = $false
+                    $masks_like[$new_tracker_data.section.ToString()] | ForEach-Object {
+                        if ( -not $is_ok -and $new_tracker_data.name -like $_ ) {
+                            $is_ok = $true
+                        }
                     }
                 }
             }
