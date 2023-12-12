@@ -31,9 +31,11 @@ If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
     $masks_like = @{}
     $conn = Open-TLODatabase
     $masks.GetEnumerator() | ForEach-Object {
-        $mask_ht = `
-        ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_.Key + ' AND na NOT LIKE "%' + ( ($masks[$_.Key] -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn ).GetEnumerator() | ForEach-Object { @{$_.id.ToString() = 1 } }
-        $masks_db[$_.key] = $mask_ht
+       
+        $masks_db[$_.key] = `
+            ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_.Key + ' AND na NOT LIKE "%' + ( ($masks[$_.Key] -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn ).GetEnumerator() `
+            | ForEach-Object { @{$_.id.ToString() = 1 } }
+            Write-Output ( 'По разделу ' + $_.key + ' отфильтровано ' + $masks_db[$_.key].count + ' неподходящих раздач' )
         $masks_like[$_.key] = $masks[$_.key] -replace ('^|$|\s', '*')
     }
     $conn.Close()
