@@ -34,11 +34,11 @@ If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
     $masks.GetEnumerator() | ForEach-Object {
        
         $masks_db[$_.key] = `
-            ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_.Key + ' AND na NOT LIKE "%' + ( ($masks[$_.Key] -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn ).GetEnumerator() `
-            | ForEach-Object { @{$_.id.ToString() = 1 } }
-            Write-Output ( 'По разделу ' + $_.key + ' найдено ' + $masks_db[$_.key].count + ' неподходящих раздач' )
+        ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_.Key + ' AND na NOT LIKE "%' + ( ($masks[$_.Key] -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn ).GetEnumerator() `
+        | ForEach-Object { @{$_.id.ToString() = 1 } }
+        Write-Output ( 'По разделу ' + $_.key + ' найдено ' + $masks_db[$_.key].count + ' неподходящих раздач' )
 
-            $masks_like[$_.key] = $masks[$_.key] -replace ('^|$|\s', '*')
+        $masks_like[$_.key] = $masks[$_.key] -replace ('^|$|\s', '*')
     }
     $masks_db.Keys | ForEach-Object {
         $masks_db[$_].Keys | ForEach-Object {
@@ -46,7 +46,7 @@ If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
         }
     }
 
-    Remove-Variable -Name $masks_db -ErrorAction SilentlyContinue
+    # Remove-Variable -Name $masks_db -ErrorAction SilentlyContinue
     $conn.Close()
 }
 else {
@@ -173,7 +173,7 @@ if ( $forced_sections_array ) {
     Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
-if ( $masks_db ){
+if ( $masks_db ) {
     Write-Output 'Отфильтровываем раздачи по маскам'
     $new_torrents_keys = $new_torrents_keys | Where-Object { !$masks_db_plain[$tracker_torrents[$_].id] }
     Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
@@ -275,23 +275,23 @@ if ( $new_torrents_keys ) {
             Start-Sleep -Milliseconds 100
         }
         elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_secs ) ) -or $new_tracker_data.status -eq 2 ) ) {
-            # $is_ok = $true
-            # if ( $masks_db -and $masks_db[$new_tracker_data.section.ToString()] -and $masks_db[$new_tracker_data.section.ToString()][$new_tracker_data.id] ) { $is_ok = $false }
-            # else {
-            #     if ( $masks_like -and $masks_like[$new_tracker_data.section.ToString()] ) {
-            #         $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
-            #         $is_ok = $false
-            #         $masks_like[$new_tracker_data.section.ToString()] | ForEach-Object {
-            #             if ( -not $is_ok -and $new_tracker_data.name -like $_ ) {
-            #                 $is_ok = $true
-            #             }
-            #         }
-            #     }
-            # }
-            # if ( -not $is_ok ) {
-            #     Write-Output ( 'Раздача ' + $new_tracker_data.name + ' отброшена фильтрами' )
-            #     continue
-            # }
+            $is_ok = $true
+            if ( $masks_db -and $masks_db[$new_tracker_data.section.ToString()] -and $masks_db[$new_tracker_data.section.ToString()][$new_tracker_data.id] ) { $is_ok = $false }
+            else {
+                if ( $masks_like -and $masks_like[$new_tracker_data.section.ToString()] ) {
+                    $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
+                    $is_ok = $false
+                    $masks_like[$new_tracker_data.section.ToString()] | ForEach-Object {
+                        if ( -not $is_ok -and $new_tracker_data.name -like $_ ) {
+                            $is_ok = $true
+                        }
+                    }
+                }
+            }
+            if ( -not $is_ok ) {
+                Write-Output ( 'Раздача ' + $new_tracker_data.name + ' отброшена фильтрами' )
+                continue
+            }
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
