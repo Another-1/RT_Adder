@@ -294,6 +294,10 @@ if ( $new_torrents_keys ) {
                 Write-Output ( 'Раздача ' + $new_tracker_data.name + ' отброшена фильтрами' )
                 continue
             }
+            if ( $new_tracker_data.section.ToString() -in $skip_sections ) {
+                Write-Output ( 'Раздача ' + $new_tracker_data.id + ' из необновляемого раздела' )
+                continue
+            }
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
