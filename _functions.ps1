@@ -487,7 +487,7 @@ function Get-Blacklist {
     # $sepa = Get-Separator
     $conn = Open-TLODatabase
     $query = 'SELECT info_hash FROM TopicsExcluded'
-    Invoke-SqliteQuery -Query $query -SQLiteConnection $conn | ForEach-Object { $blacklist[$_.info_hash] = 1 }
+    Invoke-SqliteQuery -Query $query -SQLiteConnection $conn -ErrorAction SilentlyContinue | ForEach-Object { $blacklist[$_.info_hash] = 1 }
     $conn.Close()
     return $blacklist
 }
