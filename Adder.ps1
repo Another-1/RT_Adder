@@ -96,7 +96,10 @@ if ( $forum.ProxyURL -and $forum.ProxyPassword -and $forum.ProxyPassword -ne '')
 }
 
 # подтягиваем чёрный список если нужно.
-if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) { $blacklist = Get-Blacklist }
+if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
+    $blacklist = Get-Blacklist
+    $oldblacklist = Get-OldBlacklist( $false )
+}
 
 # получаем с трекера список раздач каждого раздела
 if ( $tracker_torrents.count -eq 0 ) {
@@ -165,7 +168,8 @@ Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из чёрного списка'
-    $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] }
+    if ( $blacklist.Count -ne 0 ) { $new_torrents_keys = $new_torrents_keys | Where-Object { $nul -eq $blacklist[$_] } }
+    if ( $oldblacklist.Count -ne 0 ) { $new_torrents_keys = $new_torrents_keys | Where-Object { $clients_tor_sort[$_] -and $nul -eq $oldblacklist[$clients_tor_sort[$_]] } }
     Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 

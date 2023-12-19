@@ -468,28 +468,39 @@ function Get-Separator {
     return $separator
 }
 
-function  Open-Database( $db_path ) {
-    Write-Host 'Путь к базе данных:' $db_path
+function  Open-Database( $db_path, $verbose = $true ) {
+    if ( $verbose ) { Write-Host 'Путь к базе данных:' $db_path }
     $conn = New-SqliteConnection -DataSource $db_path
     return $conn
 }
 
-function  Open-TLODatabase {
+function  Open-TLODatabase( $verbose = $true ) {
     $sepa = Get-Separator
     $database_path = $tlo_path + $sepa + 'data' + $sepa + 'webtlo.db'
-    $conn = Open-Database $database_path
+    $conn = Open-Database $database_path $verbose
     return $conn
 }
 
-function Get-Blacklist {
+function Get-Blacklist( $verbose = $true ) {
     Write-Host 'Запрашиваем чёрный список из БД Web-TLO'
     $blacklist = @{}
     # $sepa = Get-Separator
-    $conn = Open-TLODatabase
+    $conn = Open-TLODatabase $verbose
     $query = 'SELECT info_hash FROM TopicsExcluded'
     Invoke-SqliteQuery -Query $query -SQLiteConnection $conn -ErrorAction SilentlyContinue | ForEach-Object { $blacklist[$_.info_hash] = 1 }
     $conn.Close()
     return $blacklist
+}
+
+function Get-OldBlacklist( $verbose = $true ) {
+    Write-Host 'Запрашиваем старый чёрный список из БД Web-TLO'
+    $oldblacklist = @{}
+    # $sepa = Get-Separator
+    $conn = Open-TLODatabase $verbose
+    $query = 'SELECT id FROM Blacklist'
+    Invoke-SqliteQuery -Query $query -SQLiteConnection $conn -ErrorAction SilentlyContinue | ForEach-Object { $oldblacklist[$_.id] = 1 }
+    $conn.Close()
+    return $oldblacklist
 }
 
 function Get-DBHashesBySecton ( $ss ) {
