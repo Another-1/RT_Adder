@@ -498,7 +498,7 @@ function Get-OldBlacklist( $verbose = $true ) {
     # $sepa = Get-Separator
     $conn = Open-TLODatabase $verbose
     $query = 'SELECT id FROM Blacklist'
-    Invoke-SqliteQuery -Query $query -SQLiteConnection $conn -ErrorAction SilentlyContinue | ForEach-Object { $oldblacklist[$_.id] = 1 }
+    Invoke-SqliteQuery -Query $query -SQLiteConnection $conn -ErrorAction SilentlyContinue | ForEach-Object { $oldblacklist[$_.id.ToString()] = 1 }
     $conn.Close()
     return $oldblacklist
 }
