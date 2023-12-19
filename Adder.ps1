@@ -169,7 +169,7 @@ Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из чёрного списка'
     if ( $blacklist.Count -ne 0 ) { $new_torrents_keys = $new_torrents_keys | Where-Object { $null -eq $blacklist[$_] } }
-    if ( $oldblacklist.Count -ne 0 ) { $new_torrents_keys = $new_torrents_keys | Where-Object { $clients_tor_sort[$_] -and $null -eq $oldblacklist[$tracker_torrents[$_].id] } }
+    if ( $oldblacklist.Count -ne 0 ) { $new_torrents_keys = $new_torrents_keys | Where-Object { $null -eq $oldblacklist[$tracker_torrents[$_].id] } }
     Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
 
