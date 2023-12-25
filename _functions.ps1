@@ -451,6 +451,14 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
         Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
+    while ( $true ) {
+        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи c низким приоритетом? (Y/N) [$get_lows]" ) -ne '' ) {
+            $get_lows = $prompt.ToUpper() 
+        }
+        If ( $get_news -match '^[Y|N]$' ) { break }
+        Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
+    }
+
     if ( ( $prompt = Read-host -Prompt "Токен бота Telegram, если нужна отправка событий в Telegram. Если не нужно, оставить пустым" ) -ne '' ) {
         $tg_token = $prompt
         if ( ( $prompt = Read-host -Prompt "Номер чата для отправки сообщений Telegram" ) -ne '' ) {
@@ -458,7 +466,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
         }
     }
     
-    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + '$get_lows = ' + "'" + $get_lows + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
     Write-Host 'Настройка закончена, запустите меня ещё раз.' -ForegroundColor Green
     Exit
 }

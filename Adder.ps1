@@ -113,6 +113,7 @@ if ( $tracker_torrents.count -eq 0 ) {
                 name           = $null
                 reg_time       = $section_torrents[$_][2]
                 size           = $section_torrents[$_][3]
+                priority       = $section_torrents[$_][4]
                 seeders        = $section_torrents[$_][1]
                 hidden_section = $section_details[$section.toInt32($nul)][3]
                 releaser       = $section_torrents[$_][8]
@@ -135,7 +136,7 @@ if ( $clients_torrents.count -eq 0 ) {
     $i = 1
     $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
         if ( ( $_ | Select-String ( '\d+$' ) ).matches.value.ToInt16($null) -le $client_count ) {
-            Write-Output "Учитываем клиент $i"
+            # Write-Output "Учитываем клиент $i"
             $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
             $i++
         }
@@ -172,6 +173,12 @@ if (!$min_days ) { $min_days = 0 }
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
 
 Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
+
+if ( $get_lows -and $get_lows.ToUpper() -eq 'N' ) {
+    Write-Output 'Отсеиваем раздачи с низким приоритетом'
+    $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].priority -ne '0' }
+    Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
+}
 
 if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из чёрного списка'
