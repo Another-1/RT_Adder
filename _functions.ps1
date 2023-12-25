@@ -404,6 +404,8 @@ function Get-UserTorrents ( $forum ) {
 function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $get_news, $tg_token, $tg_chat ) {
     $tlo_path = 'C:\OpenServer\domains\webtlo.local'
     $max_seeds = -1
+    $get_shown = 'Y'
+    $get_lows = 'N'
     $get_hidden = 'N'
     $get_blacklist = 'N'
     $get_news = 'N'
@@ -425,6 +427,14 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
 
     if ( ( $prompt = Read-host -Prompt "Максимальное кол-во сидов для скачивания раздачи [$max_seeds]" ) -ne '' ) {
         $max_seeds = [int]$prompt
+    }
+
+    while ( $true ) {
+        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из НЕскрытых разделов Web-TLO? (Y/N) [$get_shown]" ) -ne '' ) {
+            $get_hidden = $prompt.ToUpper() 
+        }
+        If ( $get_hidden -match '^[Y|N]$' ) { break }
+        Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
     while ( $true ) {
@@ -466,7 +476,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
         }
     }
     
-    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$get_lows = ' + "'" + $get_lows + "'`r`n" + '$tg_token = ' + "'" + $tg_token + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_shown = ' + "'" + $get_shown + "'`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$get_lows = ' + "'" + $get_lows + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n"  + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
     Write-Host 'Настройка закончена, запустите меня ещё раз.' -ForegroundColor Green
     Exit
 }
