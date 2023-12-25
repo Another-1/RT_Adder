@@ -82,13 +82,13 @@ foreach ( $torrent in $client_torrents ) {
 
             # Заменить в пути раздачи старый путь на новый
             # Переместить раздачу в полученную папку
-            Set-Location $client $torrent $torrent.save_path.Replace( $path_from, $path_to ) $true
+            Set-SaveLocation $client $torrent $torrent.save_path.Replace( $path_from, $path_to ) $true
         }
         
         # иначе
         else {
             # Переместить раздачу в новый путь
-            Set-Location $client $torrent $path_to $true
+            Set-SaveLocation $client $torrent $path_to $true
         }
     }
 
