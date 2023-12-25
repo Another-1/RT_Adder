@@ -431,9 +431,9 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
 
     while ( $true ) {
         If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из НЕскрытых разделов Web-TLO? (Y/N) [$get_shown]" ) -ne '' ) {
-            $get_hidden = $prompt.ToUpper() 
+            $get_shown = $prompt.ToUpper() 
         }
-        If ( $get_hidden -match '^[Y|N]$' ) { break }
+        If ( $get_shown -match '^[Y|N]$' ) { break }
         Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
@@ -465,7 +465,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
         If ( ( $prompt = Read-host -Prompt "Скачивать раздачи c низким приоритетом? (Y/N) [$get_lows]" ) -ne '' ) {
             $get_lows = $prompt.ToUpper() 
         }
-        If ( $get_news -match '^[Y|N]$' ) { break }
+        If ( $get_lows -match '^[Y|N]$' ) { break }
         Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
