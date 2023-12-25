@@ -171,17 +171,19 @@ Write-Output 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
 
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
+Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
+
 if ( $get_hidden -and $get_hidden -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из скрытых разделов'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].hidden_section -eq '0' }
 }
+Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 
 if ( $get_shown -and $get_shown -eq 'N' ) { 
     Write-Output 'Отсеиваем раздачи из видимых разделов'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].hidden_section -eq '1' }
 }
-
-Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
+Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 
 if ( $get_lows -and $get_lows.ToUpper() -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи с низким приоритетом'
@@ -221,7 +223,7 @@ if ( $new_torrents_keys ) {
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
             $client = $clients[$existing_torrent.client_key]
-            Write-Output ( "Раздача " + $new_tracker_data.id + ' обнаружена клиенте ' + $client.Name )
+            Write-Output ( "Раздача " + $new_tracker_data.id + ' обнаружена в клиенте ' + $client.Name )
         }
         else {
             $client = $clients[$section_details[$new_tracker_data.section][0]]
