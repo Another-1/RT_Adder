@@ -170,7 +170,8 @@ if ( $clients_torrents.count -eq 0 ) {
 Write-Output 'Ищем новые раздачи'
 if (!$min_days ) { $min_days = 0 }
 
-$new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' } 
+$new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] } | Where-Object { $get_hidden -eq 'Y' -or $tracker_torrents[$_].hidden_section -eq '0' }
+if ( $get_shown -and $get_shown -eq 'N' ) { $new_torrents_keys = $new_torrents_keys | Where-Object {  $tracker_torrents[$_].hidden_section -eq '1' } }
 
 Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 
