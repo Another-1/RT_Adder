@@ -34,7 +34,7 @@ If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
     $masks.GetEnumerator() | ForEach-Object {
         $group_mask = $_.Value
         ( $_.Key -replace ( '\s*', '')).split(',') | ForEach-Object {
-                $db_return = ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_ + ' AND na NOT LIKE "%' + ( ($group_mask -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn )
+            $db_return = ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_ + ' AND na NOT LIKE "%' + ( ($group_mask -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn )
             if ( $db_return ) {
                 $masks_db[$_] = $db_return.GetEnumerator() | ForEach-Object { @{$_.id.ToString() = 1 } }
                 Write-Output ( 'По разделу ' + $_ + ' найдено ' + $masks_db[$_].count + ' неподходящих раздач' )
@@ -130,8 +130,11 @@ if ( $nul -eq $clients_tor_sort -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) {
 
 if ( $clients_torrents.count -eq 0 ) {
     Write-Output 'Получаем из TLO данные о клиентах'
+    $client_count = $ini_data['other'].qt.ToInt16($null)
     $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
-        $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+        if ( ( $_ | Select-String ( '\d+$' ) ).matches.value -le $client_count ) {
+            $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+        }
     } 
 
     foreach ($clientkey in $clients.Keys ) {
