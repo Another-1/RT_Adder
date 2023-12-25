@@ -131,9 +131,13 @@ if ( $nul -eq $clients_tor_sort -or ( $env:TERM_PROGRAM -ne 'vscode' ) ) {
 if ( $clients_torrents.count -eq 0 ) {
     Write-Output 'Получаем из TLO данные о клиентах'
     $client_count = $ini_data['other'].qt.ToInt16($null)
+    Write-Output "Актуальных клиентов к обработке: $client_count"
+    $i = 1
     $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
-        if ( ( $_ | Select-String ( '\d+$' ) ).matches.value -le $client_count ) {
+        if ( ( $_ | Select-String ( '\d+$' ) ).matches.value.ToInt16($null) -le $client_count ) {
+            Write-Output "Учитываем клиент $i"
             $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+            $i++
         }
     } 
 
