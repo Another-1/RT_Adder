@@ -176,14 +176,16 @@ Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 if ( $get_hidden -and $get_hidden -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из скрытых разделов'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].hidden_section -eq '0' }
+    Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
-Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
+
 
 if ( $get_shown -and $get_shown -eq 'N' ) { 
     Write-Output 'Отсеиваем раздачи из видимых разделов'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].hidden_section -eq '1' }
+    Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
 }
-Write-Output ( 'Осталось раздач: ' + $new_torrents_keys.count )
+
 
 if ( $get_lows -and $get_lows.ToUpper() -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи с низким приоритетом'
