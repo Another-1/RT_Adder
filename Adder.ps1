@@ -173,6 +173,9 @@ if (!$min_days ) { $min_days = 0 }
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
 Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 
+Write-Output 'Отсеиваем совсем уж новые раздачи (меньше часа давности)'
+$new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($null) - 3600 ) }
+
 if ( $get_hidden -and $get_hidden -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из скрытых разделов'
     $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].hidden_section -eq '0' }
@@ -391,8 +394,8 @@ if ( $nul -ne $tg_token -and '' -ne $tg_token -and $report_obsolete -and $report
 }
 
 # Очистим ненужные данные из памяти.
-Remove-Variable -Name clients_tor_sort -ErrorAction SilentlyContinue
-Remove-Variable -Name clients_tor_srt2 -ErrorAction SilentlyContinue
+# Remove-Variable -Name clients_tor_sort -ErrorAction SilentlyContinue
+# Remove-Variable -Name clients_tor_srt2 -ErrorAction SilentlyContinue
 
 if ( $control -eq 'Y' ) {
     . "$PSScriptRoot\controller.ps1"
