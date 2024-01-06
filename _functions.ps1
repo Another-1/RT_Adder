@@ -85,7 +85,7 @@ function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
     }
 }
 
-function Initialize-Client ($client, $verbose = $true, $force = $false) {
+function Initialize-Client ($client, $verbose = $true, $force = $false ) {
     if ( !$client.sid -or $force -eq $true ) {
         $logindata = @{
             username = $client.login
@@ -93,7 +93,7 @@ function Initialize-Client ($client, $verbose = $true, $force = $false) {
         }
         $loginheader = @{ Referer = 'http://' + $client.IP + ':' + $client.Port }
         try {
-            if ( $verbose -eq $true ) { Write-Host ( 'Авторизуемся в клиенте ' + $client.Name ) }
+            if ( $verbose -eq $true ) { Write-Log ( 'Авторизуемся в клиенте ' + $client.Name ) }
             $url = $client.IP + ':' + $client.Port + '/api/v2/auth/login'
             $result = Invoke-WebRequest -Method POST -Uri $url -Headers $loginheader -Body $logindata -SessionVariable sid
             if ( $result.StatusCode -ne 200 ) {
@@ -113,16 +113,16 @@ function Initialize-Client ($client, $verbose = $true, $force = $false) {
     }
 }
 
-function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $nul, $client_key ) {
+function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null, $client_key ) {
     $Params = @{}
     if ( $Completed ) {
         $Params.filter = 'completed'
     }
     if ( $nul -ne $hash ) {
         $Params.hashes = $hash
-        Write-Host ( 'Получаем имя добавленной раздачи из клиента ' + $client.Name )
+        Write-Log ( 'Получаем имя добавленной раздачи из клиента ' + $client.Name )
     }
-    else { Write-Host ( 'Получаем список раздач от клиента ' + $client.Name ) }
+    else { Write-Log ( 'Получаем список раздач от клиента ' + $client.Name ) }
     if ( $disk -ne '') { $dsk = $disk + ':\\' } else { $dsk = '' }
     while ( $true ) {
         try {
@@ -476,7 +476,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
         }
     }
     
-    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_shown = ' + "'" + $get_shown + "'`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$get_lows = ' + "'" + $get_lows + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n"  + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
+    Write-Output ( '$tlo_path = ' + "'$tlo_path'" + "`r`n" + '$max_seeds = ' + $max_seeds + "`r`n" + '$get_shown = ' + "'" + $get_shown + "'`r`n" + '$get_hidden = ' + "'" + $get_hidden + "'`r`n" + '$get_blacklist = ' + "'" + $get_blacklist + "'`r`n" + '$get_news = ' + "'" + $get_news + "'`r`n" + '$get_lows = ' + "'" + $get_lows + "'`r`n" + '$tg_token = ' + "'" + $tg_token + "'`r`n" + '$tg_chat = ' + "'" + $tg_chat + "'") | Out-File "$PSScriptRoot\_settings.ps1"
     Write-Host 'Настройка закончена, запустите меня ещё раз.' -ForegroundColor Green
     Exit
 }
@@ -487,7 +487,7 @@ function Get-Separator {
 }
 
 function  Open-Database( $db_path, $verbose = $true ) {
-    if ( $verbose ) { Write-Host 'Путь к базе данных:' $db_path }
+    if ( $verbose ) { Write-Log 'Путь к базе данных:' $db_path }
     $conn = New-SqliteConnection -DataSource $db_path
     return $conn
 }
@@ -717,4 +717,13 @@ Function Set-ClientSetting ( $client, $param, $value ) {
     $param = @{ json = ( @{ $param = $value } | ConvertTo-Json -Compress ) }
     Invoke-WebRequest -Uri $url -WebSession $client.sid -Body $param -Method POST | Out-Null
 
+}
+
+function Write-Log ( $str ) {
+    if ( $use_timestamp -ne 'Y' ) {
+        Write-Host $str
+    }
+    else {
+        Write-Host ( ( Get-Date -Format 'HH:mm:ss' ) + ' ' + $str )
+    }
 }
