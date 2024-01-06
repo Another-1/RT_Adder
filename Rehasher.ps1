@@ -1,5 +1,9 @@
+# Settings
 $max_rehash_qty = 10
 $max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов
+$frequency = 365.25
+
+# Code
 
 Write-Output 'Проверяем версию Powershell...'
 If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
@@ -30,6 +34,8 @@ if ( !$max_rehash_qty -or !$max_rehash_size_bytes ) {
     exit
 }
 
+$max_repeat_epoch = ( Get-Date -UFormat %s ).ToInt32($null) - ( $frequency * 24 * 60 * 60 ) # количество секунд между повторными рехэшами одной раздачи
+
 Write-Output 'Читаем настройки Web-TLO'
 
 $ini_path = $tlo_path + '\data\config.ini'
@@ -43,12 +49,12 @@ $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].c
 
 $clients_torrents = @()
 
-foreach ($clientkey in $clients.Keys ) {
-    $client = $clients[ $clientkey ]
-    Initialize-Client( $client )
-    $client_torrents = Get-Torrents $client '' $true $nul $clientkey
-    $clients_torrents += $client_torrents
-}
+ foreach ($clientkey in $clients.Keys ) {
+     $client = $clients[ $clientkey ]
+     Initialize-Client( $client )
+     $client_torrents = Get-Torrents $client '' $true $null $clientkey
+     $clients_torrents += $client_torrents
+ }
 
 Write-Host 'Исключаем уже хэшируемые и стояшие в очереди на рехэш'
 $clients_torrents = $clients_torrents | Where-Object { $_.state -ne 'checkingUP' }
@@ -70,25 +76,34 @@ $clients_torrents | ForEach-Object {
         $full_data_sorted.Add( [PSCustomObject]@{ hash = $_.infohash_v1; rehash_date = $( $null -ne $db_data[$_.infohash_v1] -and $db_data[$_.infohash_v1] -gt 0 ? $db_data[$_.infohash_v1] : 0 ); client_key = $_.client_key; size = $_.size; name = $_.name } ) | Out-Null
     }
 }
+
+Write-Output 'Исключаем раздачи, которые рано рехэшить'
+$before = $full_data_sorted.count
+$full_data_sorted = $full_data_sorted | Where-Object { $_.rehash_date -lt $max_repeat_epoch }
+Write-Output ( 'Исключено раздач: ' + ( $before - $full_data_sorted.count ) )
+
 Write-Output 'Сортируем всё по дате рехэша и размеру'
 $full_data_sorted = $full_data_sorted | Sort-Object -Descending -Property size | Sort-Object -Property rehash_date -Stable
 
 $sum_cnt = 0
 $sum_size = 0
-$full_data_sorted | ForEach-Object {
-    Write-Output ( 'Отправляем в рехэш ' + $_.name + ' в клиенте ' + $clients[$_.client_key].Name )
-    Start-Rehash $clients[$_.client_key] $_.hash
-    if ( !$db_data[$_.hash] ) {
-        Invoke-SqliteQuery -Query "INSERT INTO rehash_dates (hash, rehash_date) VALUES (@hash, @epoch )" -SqlParameters @{ hash = $_.hash; epoch = ( Get-Date -UFormat %s ) }-SQLiteConnection $conn
+foreach ( $torrent in $full_data_sorted ) {
+    Write-Output ( 'Отправляем в рехэш ' + $torrent.name + ' в клиенте ' + $clients[$torrent.client_key].Name )
+    Start-Rehash $clients[$torrent.client_key] $torrent.hash
+    if ( !$db_data[$torrent.hash] ) {
+        Invoke-SqliteQuery -Query "INSERT INTO rehash_dates (hash, rehash_date) VALUES (@hash, @epoch )" -SqlParameters @{ hash = $torrent.hash; epoch = ( Get-Date -UFormat %s ) }-SQLiteConnection $conn
     }
     else {
-        Invoke-SqliteQuery -Query "UPDATE rehash_dates SET rehash_date = @epoch WHERE hash = @hash" -SqlParameters @{ hash = $_.hash; epoch = ( Get-Date -UFormat %s ) } -SQLiteConnection $conn
+        Invoke-SqliteQuery -Query "UPDATE rehash_dates SET rehash_date = @epoch WHERE hash = @hash" -SqlParameters @{ hash = $torrent.hash; epoch = ( Get-Date -UFormat %s ) } -SQLiteConnection $conn
     }
     $sum_cnt += 1
-    $sum_size += $_.size
+    $sum_size += $torrent.size
     if ( $sum_cnt -ge $max_rehash_qty -or $sum_size -ge $max_rehash_size_bytes) {
         break
     }
 }
+Write-Output 'Прогон завершён'
+Write-Output ( "Отправлено в рехэш: $sum_cnt раздач объёмом " + [math]::Round( $sum_size/1024/1024/1024, 2 ) + ' ГБ' )
+Write-Output ( 'Осталось: ' + ( $full_data_sorted.count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum - $sum_size )/1024/1024/1024, 2 ) + ' ГБ' )
 
 $conn.Close()
