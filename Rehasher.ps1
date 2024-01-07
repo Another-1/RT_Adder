@@ -3,8 +3,9 @@ $max_rehash_qty = 10
 $max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов
 $frequency = 365.25
 $use_timestamp = 'Y'
-# Code
+$rehash_freshes = 'N'
 
+# Code
 $str =  'Подгружаем функции' 
 if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'HH:mm:ss' ) + ' ' + $str ) }
 
@@ -59,7 +60,16 @@ $clients_torrents = @()
  }
 
 Write-Log 'Исключаем уже хэшируемые и стояшие в очереди на рехэш'
+$before = $clients_torrents.count
 $clients_torrents = $clients_torrents | Where-Object { $_.state -ne 'checkingUP' }
+ Write-Log ( 'Исключено раздач: ' + ( $before - $clients_torrents.count ) )
+
+if ( $rehash_freshes -ne 'Y') {
+    $before = $clients_torrents.count
+    Write-Log 'Исключаем свежескачанные раздачи'
+    $clients_torrents = $clients_torrents | Where-Object { $_.completion_on -le $max_repeat_epoch }
+    Write-Log ( 'Исключено раздач: ' + ( $before - $clients_torrents.count ) )
+}
 
 $db_data = @{}
 $separator = Get-Separator
