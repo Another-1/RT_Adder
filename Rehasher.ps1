@@ -1,10 +1,10 @@
 # Settings
-$max_rehash_qty = 10
-$max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов
-$frequency = 365.25
-$use_timestamp = 'Y'
-$rehash_freshes = 'N'
-$wait_finish = 'Y'
+$max_rehash_qty = 10 # (максимальное количество отправляемых в рехэш раздач за один прогон)
+$max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов (максимальный объём отправляемых в рехэш раздач за один прогон в байтах)
+$frequency = 365.25 # (минимальное время между рехэшами одной раздачи в днях)
+$use_timestamp = 'Y' # (добавлять или нет отметку даты времени к журналу в консоли)
+$rehash_freshes = 'N' # (отправлять или нет в рехэш раздачи, скачанные менее чем $frequency назад (см. выше))
+$wait_finish = 'Y' # (ожидать ли окончания рехэша раздач с отчётом в телеграм и в журнал о найденных битых и с простановкой им тега "Битая")
 
 # Code
 New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
