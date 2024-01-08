@@ -86,7 +86,7 @@ Write-Log 'Подключаемся к БД'
 $conn = Open-Database $database_path
 Invoke-SqliteQuery -Query 'CREATE TABLE IF NOT EXISTS rehash_dates (hash VARCHAR PRIMARY KEY NOT NULL, rehash_date INT)' -SQLiteConnection $conn
 Write-Log 'Выгружаем из БД даты рехэшей'
-Invoke-SqliteQuery -Query 'SELECT * FROM rehash_dates' -SQLiteConnection $conn | ForEach-Object { $db_data += @{$_.hash = $_.rehash_date } }
+Invoke-SqliteQuery -Query 'SELECT * FROM rehash_dates' -SQLiteConnection $conn | ForEach-Object { $db_data[$_.hash] = $_.rehash_date } 
 
 $full_data_sorted = [System.Collections.ArrayList]::new()
 Write-Log 'Ищем раздачи из клиентов в БД рехэшей'
