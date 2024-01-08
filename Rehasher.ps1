@@ -4,9 +4,17 @@ $max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов
 $frequency = 365.25
 $use_timestamp = 'Y'
 $rehash_freshes = 'N'
-$wait_finish = 'Y'
+$wait_finish = 'N'
 
 # Code
+$separator = Get-Separator
+if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
+    Write-Host 'Обнаружен файл блокировки, выходим' -ForegroundColor Red
+    exit
+}
+
+New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
+
 $str = 'Подгружаем функции' 
 if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'HH:mm:ss' ) + ' ' + $str ) }
 
@@ -73,7 +81,6 @@ if ( $rehash_freshes -ne 'Y') {
 }
 
 $db_data = @{}
-$separator = Get-Separator
 $database_path = $PSScriptRoot + $separator + 'rehashes.db'
 Write-Log 'Подключаемся к БД'
 $conn = Open-Database $database_path
@@ -146,3 +153,4 @@ Write-Log ( "Отправлено в рехэш: $sum_cnt раздач объё�
 Write-Log ( 'Осталось: ' + ( $full_data_sorted.count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum - $sum_size ) / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
 
 $conn.Close()
+Delete-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') | Out-Null
