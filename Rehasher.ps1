@@ -4,9 +4,10 @@ $max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов
 $frequency = 365.25
 $use_timestamp = 'Y'
 $rehash_freshes = 'N'
+$wait_finish = 'Y'
 
 # Code
-$str =  'Подгружаем функции' 
+$str = 'Подгружаем функции' 
 if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'HH:mm:ss' ) + ' ' + $str ) }
 
 . "$PSScriptRoot\_functions.ps1"
@@ -52,17 +53,17 @@ $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].c
 
 $clients_torrents = @()
 
- foreach ($clientkey in $clients.Keys ) {
-     $client = $clients[ $clientkey ]
-     Initialize-Client( $client )
-     $client_torrents = Get-Torrents $client '' $true $null $clientkey
-     $clients_torrents += $client_torrents
- }
+foreach ($clientkey in $clients.Keys ) {
+    $client = $clients[ $clientkey ]
+    Initialize-Client( $client )
+    $client_torrents = Get-Torrents $client '' $true $null $clientkey
+    $clients_torrents += $client_torrents
+}
 
 Write-Log 'Исключаем уже хэшируемые и стояшие в очереди на рехэш'
 $before = $clients_torrents.count
 $clients_torrents = $clients_torrents | Where-Object { $_.state -ne 'checkingUP' }
- Write-Log ( 'Исключено раздач: ' + ( $before - $clients_torrents.count ) )
+Write-Log ( 'Исключено раздач: ' + ( $before - $clients_torrents.count ) )
 
 if ( $rehash_freshes -ne 'Y') {
     $before = $clients_torrents.count
@@ -100,6 +101,15 @@ $full_data_sorted = $full_data_sorted | Sort-Object -Descending -Property size |
 $sum_cnt = 0
 $sum_size = 0
 foreach ( $torrent in $full_data_sorted ) {
+    if ( $wait_finish -eq 'Y' ) {
+        Write-Log ( 'Будем рехэшить торрент "' + $torrent.name + '" в клиенте ' + $clients[$torrent.client_key].Name + ' но сначала запомним его состояние и при необходимости остановим')
+        $prev_state = ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state
+        if ( $prev_state -eq 'pausedUP') { Write-Log 'Торрент остановлен, так и запишем' } else { Write-Log 'Торрент запущен, так и запишем' }
+        if ( $prev_state -ne 'pausedUP' ) {
+            Write-Log ( 'Останавливаем ' + $torrent.name + ' в клиенте ' + $clients[$torrent.client_key].Name )
+            Stop-Torrents $torrent.hash $clients[$torrent.client_key]
+        }
+    }
     Write-Log ( 'Отправляем в рехэш ' + $torrent.name + ' в клиенте ' + $clients[$torrent.client_key].Name )
     Start-Rehash $clients[$torrent.client_key] $torrent.hash
     if ( !$db_data[$torrent.hash] ) {
@@ -110,12 +120,29 @@ foreach ( $torrent in $full_data_sorted ) {
     }
     $sum_cnt += 1
     $sum_size += $torrent.size
+    if ( $wait_finish -eq 'Y' ) {
+        Start-Sleep -Seconds 2
+        Write-Log 'Подождём окончания рехэша'
+        while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'checking*' ) {
+            Start-Sleep -Seconds 5
+        }
+        if ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress -lt 1 ) {
+            Write-Log ( 'Раздача ' + $torrent.name + ' битая! Запускаем докачку' )
+            Start-Torrents $torrent.hash $clients[$torrent.client_key]
+        }
+        else {
+            Write-Log ( 'Раздача ' + $torrent.name + ' в порядке' )
+            if ( $prev_state -ne 'pausedUP' ) { Start-Torrents $torrent.hash $clients[$torrent.client_key] }
+        }
+    }
+
     if ( $sum_cnt -ge $max_rehash_qty -or $sum_size -ge $max_rehash_size_bytes) {
         break
     }
 }
+
 Write-Log 'Прогон завершён'
-Write-Log ( "Отправлено в рехэш: $sum_cnt раздач объёмом " + [math]::Round( $sum_size/1024/1024/1024, 2 ) + ' ГБ' )
-Write-Log ( 'Осталось: ' + ( $full_data_sorted.count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum - $sum_size )/1024/1024/1024, 2 ) + ' ГБ' )
+Write-Log ( "Отправлено в рехэш: $sum_cnt раздач объёмом " + [math]::Round( $sum_size / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
+Write-Log ( 'Осталось: ' + ( $full_data_sorted.count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum - $sum_size ) / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
 
 $conn.Close()

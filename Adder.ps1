@@ -173,8 +173,8 @@ if (!$min_days ) { $min_days = 0 }
 $new_torrents_keys = $tracker_torrents.keys | Where-Object { $nul -eq $clients_tor_sort[$_] }
 Write-Output ( 'Новых раздач: ' + $new_torrents_keys.count )
 
-Write-Output 'Отсеиваем совсем уж новые раздачи (меньше часа давности)'
-$new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($null) - 3600 ) }
+# Write-Output 'Отсеиваем совсем уж новые раздачи (меньше часа давности)'
+# $new_torrents_keys = $new_torrents_keys | Where-Object { $tracker_torrents[$_].reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($null) - 3600 ) }
 
 if ( $get_hidden -and $get_hidden -eq 'N' ) {
     Write-Output 'Отсеиваем раздачи из скрытых разделов'
@@ -308,7 +308,7 @@ if ( $new_torrents_keys ) {
             #     Invoke-WebRequest -Uri $url_set -WebSession $client.sid -Body $param -Method POST
             #     Remove-Variable -Name old_temp_path
             # }
-            Start-Sleep -Milliseconds 100
+            Start-Sleep -Milliseconds 100 
         }
         elseif ( !$existing_torrent -and $get_news -eq 'Y' -and ( ( $new_tracker_data.reg_time -lt ( ( Get-Date -UFormat %s  ).ToInt32($nul) - $min_secs ) ) -or $new_tracker_data.status -eq 2 ) ) {
             $is_ok = $true

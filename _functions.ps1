@@ -113,21 +113,21 @@ function Initialize-Client ($client, $verbose = $true, $force = $false ) {
     }
 }
 
-function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null, $client_key ) {
+function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null, $client_key, $verbose = $true) {
     $Params = @{}
     if ( $Completed ) {
         $Params.filter = 'completed'
     }
     if ( $nul -ne $hash ) {
         $Params.hashes = $hash
-        Write-Log ( 'Получаем имя добавленной раздачи из клиента ' + $client.Name )
+        if ( $verbose -eq $true ) { Write-Log ( 'Получаем инфо о раздаче из клиента ' + $client.Name ) }
     }
-    else { Write-Log ( 'Получаем список раздач от клиента ' + $client.Name ) }
+    elseif ( $verbose -eq $true ) { Write-Log ( 'Получаем список раздач от клиента ' + $client.Name ) }
     if ( $disk -ne '') { $dsk = $disk + ':\\' } else { $dsk = '' }
     while ( $true ) {
         try {
             $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | `
-                Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on | `
+                Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch {
@@ -487,7 +487,7 @@ function Get-Separator {
 }
 
 function  Open-Database( $db_path, $verbose = $true ) {
-    if ( $verbose ) { Write-Log 'Путь к базе данных:' $db_path }
+    if ( $verbose ) { Write-Log ( 'Путь к базе данных: ' + $db_path ) }
     $conn = New-SqliteConnection -DataSource $db_path
     return $conn
 }
@@ -610,8 +610,6 @@ function Get-Disk ( $obligatory, $prompt ) {
     }
     return $disk
 }
-
-
 function  Set-SaveLocation ( $client, $torrent, $new_path, $verbose = $false) {
     if ( $verbose ) { Write-Host ( 'Перемещаем ' + $torrent.name ) }
     $data = @{
