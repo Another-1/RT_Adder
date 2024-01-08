@@ -7,8 +7,6 @@ $rehash_freshes = 'N' # (отправлять или нет в рехэш раз
 $wait_finish = 'Y' # (ожидать ли окончания рехэша раздач с отчётом в телеграм и в журнал о найденных битых и с простановкой им тега "Битая")
 
 # Code
-New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
-
 $str = 'Подгружаем функции' 
 if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str ) }
 
@@ -19,6 +17,8 @@ if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
     Write-Host 'Обнаружен файл блокировки, выходим' -ForegroundColor Red
     exit
 }
+
+New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
 
 Write-Log 'Проверяем версию Powershell...'
 If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
