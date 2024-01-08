@@ -722,6 +722,6 @@ function Write-Log ( $str ) {
         Write-Host $str
     }
     else {
-        Write-Host ( ( Get-Date -Format 'HH:mm:ss' ) + ' ' + $str )
+        Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str )
     }
 }

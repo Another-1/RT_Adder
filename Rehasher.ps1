@@ -4,7 +4,7 @@ $max_rehash_size_bytes = 10 * 1024 * 1024 * 1024 # 10 гигов
 $frequency = 365.25
 $use_timestamp = 'Y'
 $rehash_freshes = 'N'
-$wait_finish = 'N'
+$wait_finish = 'Y'
 
 # Code
 $separator = Get-Separator
@@ -16,7 +16,7 @@ if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
 New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
 
 $str = 'Подгружаем функции' 
-if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'HH:mm:ss' ) + ' ' + $str ) }
+if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str ) }
 
 . "$PSScriptRoot\_functions.ps1"
 
@@ -103,7 +103,7 @@ $full_data_sorted = $full_data_sorted | Where-Object { $_.rehash_date -lt $max_r
 Write-Log ( 'Исключено раздач: ' + ( $before - $full_data_sorted.count ) )
 
 Write-Log 'Сортируем всё по дате рехэша и размеру'
-$full_data_sorted = $full_data_sorted | Sort-Object -Descending -Property size | Sort-Object -Property rehash_date -Stable
+$full_data_sorted = $full_data_sorted | Sort-Object -Property size -Descending | Sort-Object -Property rehash_date -Stable
 
 $sum_cnt = 0
 $sum_size = 0
@@ -136,6 +136,9 @@ foreach ( $torrent in $full_data_sorted ) {
         if ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress -lt 1 ) {
             Write-Log ( 'Раздача ' + $torrent.name + ' битая! Запускаем докачку' )
             Start-Torrents $torrent.hash $clients[$torrent.client_key]
+            Set-Comment $clients[$torrent.client_key] $torrent 'Битая'
+            $message = 'Битая раздача ' + $torrent.name + ' в клиенте http://' + $clients[$torrent.client_key].IP + ':' + $clients[$torrent.client_key].Port
+            Send-TGMessage $message $tg_token $tg_chat
         }
         else {
             Write-Log ( 'Раздача ' + $torrent.name + ' в порядке' )
@@ -153,4 +156,4 @@ Write-Log ( "Отправлено в рехэш: $sum_cnt раздач объё�
 Write-Log ( 'Осталось: ' + ( $full_data_sorted.count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum - $sum_size ) / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
 
 $conn.Close()
-Delete-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') | Out-Null
+Remove-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') | Out-Null
