@@ -18,6 +18,7 @@ if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
     exit
 }
 
+Write-Log ('Создаём файл блокировки от повторных запусков ' + $PSScriptRoot + $separator + 'rehasher.lck' )
 New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
 
 Write-Log 'Проверяем версию Powershell...'
