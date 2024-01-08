@@ -129,7 +129,7 @@ foreach ( $torrent in $full_data_sorted ) {
     $sum_cnt += 1
     $sum_size += $torrent.size
     if ( $wait_finish -eq 'Y' ) {
-        Start-Sleep -Seconds 2
+        Start-Sleep -Seconds 5
         Write-Log 'Подождём окончания рехэша'
         while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'checking*' ) {
             Start-Sleep -Seconds 5
