@@ -224,6 +224,7 @@ if ( $new_torrents_keys ) {
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
+        # $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
         $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
@@ -247,16 +248,17 @@ if ( $new_torrents_keys ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $on_ssd = ( $nul -ne $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] )
-            $text = "Обновляем раздачу " + $new_tracker_data.id + ' в клиенте ' + $client.Name
+            $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
+            $text = "Обновляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиенте ' + $client.Name
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
                 if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
                 if ( $ssd ) {
-                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + $existing_torrent.save_path[0] )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + $new_tracker_data.name + ' ' + $existing_torrent.save_path[0] )
                 }
                 else {
-                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + "`n")
                 }
                 $refreshed_ids += $new_tracker_data.id
             }
@@ -329,17 +331,18 @@ if ( $new_torrents_keys ) {
                 continue
             }
             if ( $new_tracker_data.section.ToString() -in $skip_sections ) {
-                Write-Output ( 'Раздача ' + $new_tracker_data.id + ' из необновляемого раздела' )
+                # Write-Output ( 'Раздача ' + $new_tracker_data.id + ' из необновляемого раздела' )
                 continue
             }
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
-            $text = "Добавляем раздачу " + $new_tracker_data.id + ' в клиент ' + $client.Name
+            if ( $null -eq $new_tracker_data.name ) { $new_tracker_data.name = Get-TorrentName $new_tracker_data.id }
+            $text = "Добавляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиент ' + $client.Name
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$added[ $client.Name ] ) { $added[ $client.Name ] = @{} }
                 if ( !$added[ $client.Name ][ $new_tracker_data.section ] ) { $added[ $client.Name ][ $new_tracker_data.section ] = @() }
-                $added[ $client.Name][$new_tracker_data.section] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id )
+                $added[ $client.Name][$new_tracker_data.section] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + "`n" )
             }
             $save_path = $section_details[$new_tracker_data.section][1]
             if ( $subfolder_kind -eq 1 ) {

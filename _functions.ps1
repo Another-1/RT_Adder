@@ -691,7 +691,17 @@ function Get-TorrentName ( $id ) {
         by  = 'topic_id'
         val = $id 
     }
-    $name = ( ( Invoke-WebRequest -uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id.topic_title
+
+    while ( $true ) {
+        try {
+            $name = ( ( Invoke-WebRequest -uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id.topic_title
+            break
+        }
+        catch {
+            Start-Sleep -Seconds 10; $i++; Write-Host "Попытка номер $i" -ForegroundColor Cyan
+            If ( $i -gt 20 ) { break }
+        }
+    }
     return $name
 }
 
