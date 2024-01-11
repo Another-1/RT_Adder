@@ -5,6 +5,7 @@ $frequency = 365.25 # (минимальное время между рехэша
 $use_timestamp = 'Y' # (добавлять или нет отметку даты времени к журналу в консоли)
 $rehash_freshes = 'N' # (отправлять или нет в рехэш раздачи, скачанные менее чем $frequency назад (см. выше))
 $wait_finish = 'Y' # (ожидать ли окончания рехэша раздач с отчётом в телеграм и в журнал о найденных битых и с простановкой им тега "Битая")
+$mix_clients = 'N'
 
 # Code
 $str = 'Подгружаем функции' 
@@ -103,8 +104,30 @@ $before = $full_data_sorted.count
 $full_data_sorted = $full_data_sorted | Where-Object { $_.rehash_date -lt $max_repeat_epoch }
 Write-Log ( 'Исключено раздач: ' + ( $before - $full_data_sorted.count ) )
 
+if ( $max_rehash_qty -and $mix_clients -ne 'Y') {
+    Write-Log "Отбрасываем все раздачи кроме первых $max_rehash_qty"
+    $full_data_sorted = $full_data_sorted | Select-Object -First $max_rehash_qty
+}
+
 Write-Log 'Сортируем всё по дате рехэша и размеру'
 $full_data_sorted = $full_data_sorted | Sort-Object -Property size -Descending | Sort-Object -Property rehash_date -Stable
+
+if ( $mix_clients -eq 'Y') {
+    Write-Log 'Тщательнейшим образом перемешиваем клиентов'
+    $per_client = @{}
+    $full_resorted = [System.Collections.ArrayList]::new()
+    foreach ( $i in  0..( $full_data_sorted | measure-Object -Property client_key -Maximum ).maximum ) { $per_client[$i] = $full_data_sorted | Where-Object { $_.client_key -eq $i } }
+    
+    $max_qty = ( $per_client.GetEnumerator() | ForEach-Object { $_.Value.count } | Measure-Object -Maximum ).Maximum
+    for ( $j = 0; $j -lt $max_qty ; $j++) {
+        foreach ( $k in 0..$i ) {
+            try { $full_resorted += $per_client[$k][$j] }
+            catch {}
+        }
+    }
+    $full_data_sorted = $full_resorted
+    Remove-Variable -Name full_resorted    
+}
 
 $sum_cnt = 0
 $sum_size = 0
