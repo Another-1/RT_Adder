@@ -255,7 +255,7 @@ if ( $new_torrents_keys ) {
                 if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
                 if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
                 if ( $ssd ) {
-                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + ' ' + $existing_torrent.save_path[0] + $new_tracker_data.name + "`n" )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + ' ' + $existing_torrent.save_path[0] + "`n" + $new_tracker_data.name + "`n" )
                 }
                 else {
                     $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + "`n")
