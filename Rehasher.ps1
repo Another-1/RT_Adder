@@ -16,7 +16,7 @@ if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date
 
 $separator = Get-Separator
 
-if ( ( ( get-process | Where-Object {$_.ProcessName -eq 'pwsh'} ).CommandLine -like '*Rehasher.ps1').count -gt 1 ) {
+if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*Rehasher.ps1').count -gt 1 ) {
     Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
     exit
 }
@@ -125,12 +125,18 @@ if ( $mix_clients -eq 'Y') {
     $full_resorted = [System.Collections.ArrayList]::new()
     foreach ( $i in  0..( $full_data_sorted | measure-Object -Property client_key -Maximum ).maximum ) { $per_client[$i] = $full_data_sorted | Where-Object { $_.client_key -eq $i } }
     
+    $done = 0
     $max_qty = ( $per_client.GetEnumerator() | ForEach-Object { $_.Value.count } | Measure-Object -Maximum ).Maximum
     for ( $j = 0; $j -lt $max_qty ; $j++) {
         foreach ( $k in 0..$i ) {
-            try { $full_resorted += $per_client[$k][$j] }
+            try {
+                $full_resorted += $per_client[$k][$j]
+                $done ++ 
+            }
             catch {}
+            if ( $done -ge $max_rehash_qty ) { break }
         }
+        if ( $done -ge $max_rehash_qty ) { break }
     }
     $full_data_sorted = $full_resorted
     Remove-Variable -Name full_resorted    
