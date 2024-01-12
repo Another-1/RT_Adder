@@ -5,7 +5,8 @@ $frequency = 365.25 # (минимальное время между рехэша
 $use_timestamp = 'Y' # (добавлять или нет отметку даты времени к журналу в консоли)
 $rehash_freshes = 'N' # (отправлять или нет в рехэш раздачи, скачанные менее чем $frequency назад (см. выше))
 $wait_finish = 'Y' # (ожидать ли окончания рехэша раздач с отчётом в телеграм и в журнал о найденных битых и с простановкой им тега "Битая")
-$mix_clients = 'N'
+$mix_clients = 'N' # перемешивать раздачи перед отправкой в рехэш для равномерной загрузки клиентов (ресурсоёмко!)
+$check_state_delay = 5 # задержка в секундах перед опросом состояния после отправки в рехэш. Должнать быть больше или равна интервалу обновления интерфейса кубита.
 
 # Code
 $str = 'Подгружаем функции' 
@@ -152,7 +153,7 @@ foreach ( $torrent in $full_data_sorted ) {
     $sum_cnt += 1
     $sum_size += $torrent.size
     if ( $wait_finish -eq 'Y' ) {
-        Start-Sleep -Seconds 5
+        Start-Sleep -Seconds $check_state_delay
         Write-Log 'Подождём окончания рехэша'
         while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'checking*' ) {
             Start-Sleep -Seconds 5
