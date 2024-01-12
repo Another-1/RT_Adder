@@ -111,6 +111,9 @@ $before = $full_data_sorted.count
 $full_data_sorted = $full_data_sorted | Where-Object { $_.rehash_date -lt $max_repeat_epoch }
 Write-Log ( 'Исключено раздач: ' + ( $before - $full_data_sorted.count ) )
 
+$was_count = $full_data_sorted.count
+$was_sum_size = ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum
+
 if ( $max_rehash_qty -and $mix_clients -ne 'Y') {
     Write-Log "Отбрасываем все раздачи кроме первых $max_rehash_qty"
     $full_data_sorted = $full_data_sorted | Select-Object -First $max_rehash_qty
@@ -190,7 +193,7 @@ foreach ( $torrent in $full_data_sorted ) {
 
 Write-Log 'Прогон завершён'
 Write-Log ( "Отправлено в рехэш: $sum_cnt раздач объёмом " + [math]::Round( $sum_size / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
-Write-Log ( 'Осталось: ' + ( $full_data_sorted.count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum - $sum_size ) / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
+Write-Log ( 'Осталось: ' + ( $was_count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( $was_sum_size - $sum_size ) / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
 
 $conn.Close()
 Remove-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') | Out-Null
