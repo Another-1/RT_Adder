@@ -15,6 +15,12 @@ if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date
 . "$PSScriptRoot\_functions.ps1"
 
 $separator = Get-Separator
+
+if ( ( ( get-process | Where-Object {$_.ProcessName -eq 'pwsh'} ).CommandLine -like '*Rehasher.ps1').count -gt 0 ) {
+    Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
+    exit
+}
+
 if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
     Write-Host 'Обнаружен файл блокировки, выходим' -ForegroundColor Red
     exit
