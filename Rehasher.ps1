@@ -122,10 +122,10 @@ Write-Log ( 'Исключено раздач: ' + ( $before - $full_data_sorted.
 $was_count = $full_data_sorted.count
 $was_sum_size = ( $full_data_sorted | Measure-Object -Property size -Sum ).Sum
 
-if ( $max_rehash_qty -and $mix_clients -ne 'Y') {
-    Write-Log "Отбрасываем все раздачи кроме первых $max_rehash_qty"
-    $full_data_sorted = $full_data_sorted | Select-Object -First $max_rehash_qty
-}
+# if ( $max_rehash_qty -and $mix_clients -ne 'Y') {
+#     Write-Log "Отбрасываем все раздачи кроме первых $max_rehash_qty"
+#     $full_data_sorted = $full_data_sorted | Select-Object -First $max_rehash_qty
+# }
 
 Write-Log 'Сортируем всё по дате рехэша и размеру'
 $full_data_sorted = $full_data_sorted | Sort-Object -Property size -Descending | Sort-Object -Property rehash_date -Stable
