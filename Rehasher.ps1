@@ -64,9 +64,12 @@ $ini_data = Get-IniContent $ini_path
 
 Write-Log 'Получаем из TLO данные о клиентах'
 $clients = @{}
-$ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
+
+$client_count = $ini_data['other'].qt.ToInt16($null)
+Write-Log "Актуальных клиентов к обработке: $client_count"
+$ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | Select-Object -First $client_count | ForEach-Object { 
     $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
-} 
+}
 
 $clients_torrents = @()
 
