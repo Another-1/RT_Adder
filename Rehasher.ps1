@@ -67,9 +67,14 @@ $clients = @{}
 
 $client_count = $ini_data['other'].qt.ToInt16($null)
 Write-Log "Актуальных клиентов к обработке: $client_count"
-$ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | Select-Object -First $client_count | ForEach-Object { 
-    $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
-}
+$i = 1
+$ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
+    if ( ( $_ | Select-String ( '\d+$' ) ).matches.value.ToInt16($null) -le $client_count ) {
+        # Write-Output "Учитываем клиент $i"
+        $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+        $i++
+    }
+} 
 
 $clients_torrents = @()
 
