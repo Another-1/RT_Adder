@@ -101,6 +101,12 @@ if ( $nul -ne $get_blacklist -and $get_blacklist.ToUpper() -eq 'N' ) {
     $oldblacklist = Get-OldBlacklist( $false )
 }
 
+# исключаем праздничные разделы.
+if ( $skip_sections ) {
+    Write-Host 'Исключаем праздничные разделы'
+    $sections = $sections | Where-Object { $_ -notin $skip_sections }
+}
+
 # получаем с трекера список раздач каждого раздела
 if ( $tracker_torrents.count -eq 0 ) {
     foreach ( $section in $sections ) {

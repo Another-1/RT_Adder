@@ -126,12 +126,15 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null,
     if ( $disk -ne '') { $dsk = $disk + ':\\' } else { $dsk = '' }
     while ( $true ) {
         try {
-            $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | `
+            $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -ConnectionTimeoutSeconds 30 ).Content | ConvertFrom-Json | `
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch {
-            exit
+            Initialize-Client $client $false $true
+            $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -ConnectionTimeoutSeconds 30 ).Content | ConvertFrom-Json | `
+                Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
+                Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         if ( !$torrents_list ) { $torrents_list = @() }
         return $torrents_list
