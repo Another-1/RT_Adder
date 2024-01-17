@@ -230,7 +230,6 @@ if ( $new_torrents_keys ) {
     $ProgressPreference = 'SilentlyContinue'
     foreach ( $new_torrent_key in $new_torrents_keys ) {
         $new_tracker_data = $tracker_torrents[$new_torrent_key]
-        # $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
         $subfolder_kind = $section_details[$new_tracker_data.section][2].ToInt16($null)
         $existing_torrent = $clients_tor_srt2[ $new_tracker_data.id ]
         if ( $existing_torrent ) {
@@ -254,14 +253,14 @@ if ( $new_torrents_keys ) {
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $on_ssd = ( $nul -ne $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] )
-            $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
-            $text = "Обновляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиенте ' + $client.Name
+            $new_tracker_data.name = ( Get-TorrentInfo $new_tracker_data.id ).name
+            $text = "Обновляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиенте ' + $client.Name + ' (' + ( to_kmg $new_tracker_data.size 1 ) + ')'
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
                 if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
                 if ( $ssd ) {
-                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + ' ' + $existing_torrent.save_path[0] + "`n" + $new_tracker_data.name + "`n" )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + ' ' + $existing_torrent.save_path[0] + "`n" + $new_tracker_data.name + ' (' + ( to_kmg $new_tracker_data.size 1 ) + ')' + "`n" )
                 }
                 else {
                     $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + "`n")
@@ -323,7 +322,7 @@ if ( $new_torrents_keys ) {
             if ( $masks_db -and $masks_db[$new_tracker_data.section.ToString()] -and $masks_db[$new_tracker_data.section.ToString()][$new_tracker_data.id] ) { $is_ok = $false }
             else {
                 if ( $masks_like -and $masks_like[$new_tracker_data.section.ToString()] ) {
-                    $new_tracker_data.name = Get-TorrentName $new_tracker_data.id
+                    $new_tracker_data.name = ( Get-TorrentInfo $new_tracker_data.id ).name
                     $is_ok = $false
                     $masks_like[$new_tracker_data.section.ToString()] | ForEach-Object {
                         if ( -not $is_ok -and $new_tracker_data.name -like $_ ) {
@@ -342,18 +341,18 @@ if ( $new_torrents_keys ) {
             }
             if ( !$forum.sid ) { Initialize-Forum $forum }
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
-            if ( $null -eq $new_tracker_data.name ) { $new_tracker_data.name = Get-TorrentName $new_tracker_data.id }
-            $text = "Добавляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиент ' + $client.Name
+            if ( $null -eq $new_tracker_data.name ) { $new_tracker_data.name = ( Get-TorrentInfo $new_tracker_data.id ).name }
+            $text = "Добавляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиент ' + $client.Name + ' (' + ( to_kmg $new_tracker_data.size 1 ) + ')'
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$added[ $client.Name ] ) { $added[ $client.Name ] = @{} }
                 if ( !$added[ $client.Name ][ $new_tracker_data.section ] ) { $added[ $client.Name ][ $new_tracker_data.section ] = @() }
-                $added[ $client.Name][$new_tracker_data.section] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + "`n" )
+                $added[ $client.Name][$new_tracker_data.section] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + ' (' + ( to_kmg $new_tracker_data.size 1 ) + ')' + "`n" )
             }
             $save_path = $section_details[$new_tracker_data.section][1]
             if ( $subfolder_kind -eq 1 ) {
                 $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_tracker_data.id # добавляем ID к имени папки для сохранения
-            }
+            }       
             elseif ( $subfolder_kind -eq 2 ) {
                 $save_path = ( $save_path -replace ( '\\$', '') -replace ( '/$', '') ) + '/' + $new_torrent_key  # добавляем hash к имени папки для сохранения
             }

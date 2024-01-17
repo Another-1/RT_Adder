@@ -1,3 +1,15 @@
+function to_kmg ($bytes, [int]$precision = 0) {
+    foreach ($i in ("Bytes", "KB", "MB", "GB", "TB")) {
+        if (($bytes -lt 1024) -or ($i -eq "TB")) {
+            $bytes = ($bytes).tostring("F0" + "$precision")
+            return $bytes + " $i"
+        }
+        else {
+            $bytes /= 1KB
+        }
+    }
+}
+
 function Send-TGMessage ( $message, $token, $chat_id ) {
     $payload = @{
         "chat_id"                  = $chat_id
@@ -689,7 +701,7 @@ function Get-TorrentTrackers ( $client, $hash ) {
     return $trackers
 }
 
-function Get-TorrentName ( $id ) {
+function Get-TorrentInfo ( $id ) {
     $params = @{ 
         by  = 'topic_id'
         val = $id 
@@ -697,7 +709,9 @@ function Get-TorrentName ( $id ) {
 
     while ( $true ) {
         try {
-            $name = ( ( Invoke-WebRequest -uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id.topic_title
+            $torinfo = ( ( Invoke-WebRequest -uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id
+            $name = $torinfo.topic_title
+            $size = $torinfo.size
             break
         }
         catch {
@@ -705,7 +719,7 @@ function Get-TorrentName ( $id ) {
             If ( $i -gt 20 ) { break }
         }
     }
-    return $name
+    return [PSCustomObject]@{ 'name' = $name; 'size' = $size }
 }
 
 function Edit-Tracker ( $client, $hash, $origUrl, $newUrl ) {
