@@ -170,6 +170,7 @@ if ( $clients_torrents.count -eq 0 ) {
             category   = $_.category
             name       = $_.name
             hash       = $_.hash
+            size       = $_.size
         }
     }
 }
@@ -254,13 +255,13 @@ if ( $new_torrents_keys ) {
             $new_torrent_file = Get-ForumTorrentFile $new_tracker_data.id
             $on_ssd = ( $nul -ne $ssd -and $existing_torrent.save_path[0] -in $ssd[$existing_torrent.client_key] )
             $new_tracker_data.name = ( Get-TorrentInfo $new_tracker_data.id ).name
-            $text = "Обновляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиенте ' + $client.Name + ' (' + ( to_kmg $new_tracker_data.size 1 ) + ')'
+            $text = "Обновляем раздачу " + $new_tracker_data.id + " " + $new_tracker_data.name + ' в клиенте ' + $client.Name + ' (' + ( to_kmg $existing_torrent.size 1 ) + ' -> ' + ( to_kmg $new_tracker_data.size 1 ) + ')'
             Write-Output $text
             if ( $nul -ne $tg_token -and '' -ne $tg_token ) {
                 if ( !$refreshed[ $client.Name ] ) { $refreshed[ $client.Name] = @{} }
                 if ( !$refreshed[ $client.Name ][ $new_tracker_data.section] ) { $refreshed[ $client.Name ][ $new_tracker_data.section ] = @() }
                 if ( $ssd ) {
-                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + ' ' + $existing_torrent.save_path[0] + "`n" + $new_tracker_data.name + ' (' + ( to_kmg $new_tracker_data.size 1 ) + ')' + "`n" )
+                    $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + ( $on_ssd ? ' SSD ' : ' HDD ' ) + ' ' + $existing_torrent.save_path[0] + "`n" + $new_tracker_data.name + ' (' + ( to_kmg $existing_torrent.size 1 ) + ' -> ' + ( to_kmg $new_tracker_data.size 1 ) + ')' + "`n" )
                 }
                 else {
                     $refreshed[ $client.Name][ $new_tracker_data.section ] += ( 'https://' + $forum.url + '/forum/viewtopic.php?t=' + $new_tracker_data.id + "`n" + $new_tracker_data.name + "`n")
