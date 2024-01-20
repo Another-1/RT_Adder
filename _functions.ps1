@@ -644,7 +644,7 @@ function  Set-SaveLocation ( $client, $torrent, $new_path, $verbose = $false) {
 function  Rename-Folder ( $client, $torrent, $old_path, $new_path, $verbose = $false) {
     if ( $verbose ) { Write-Host ( 'Переназываем ' + $torrent.name + ' в ' + $new_path) }
     $data = @{
-        hashes  = $torrent.hash
+        hash  = $torrent.hash
         oldPath = $old_path
         newPath = $new_path
     }

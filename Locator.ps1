@@ -54,8 +54,8 @@ foreach ($clientkey in $clients.Keys ) {
 Write-Output 'Сортируем раздачи по давности закачки' 
 $clients_torrents = $clients_torrents | Sort-Object -Property completion_on
 
-$fix = 'N'
 $paths = @{}
+$fix = 'N'
 $cnt = 0
 
 $separator = Get-Separator
