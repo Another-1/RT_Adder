@@ -58,6 +58,8 @@ $fix = 'N'
 $paths = @{}
 $cnt = 0
 
+$separator = Get-Separator
+
 foreach ( $torrent in $client_torrents ) {
     $cnt++
     Write-Progress -Activity 'Ищу' -Status $torrent.name -PercentComplete ( $cnt * 100 / $client_torrents.Count )
@@ -88,7 +90,7 @@ foreach ( $torrent in $client_torrents ) {
             # $torrent.content_path = $torrent.content_path + '_' + $torrent.topic_id
             # Set-SaveLocation $clients[$torrent.client_key] $torrent $torrent.content_path $true
 
-            Rename-Folder $clients[$torrent.client_key] $torrent $torrent.content_path ( $torrent.content_path + '_' + $torrent.topic_id ) $true
+            Rename-Folder $clients[$torrent.client_key] $torrent ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) )  ( ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) ) + '_' + $torrent.topic_id ) $true
             Write-Log 'Подождём окончания перемещения'
             Start-Sleep -Seconds 2
             while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'moving*' ) {
