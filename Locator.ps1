@@ -51,18 +51,48 @@ foreach ($clientkey in $clients.Keys ) {
     $clients_torrents += $client_torrents
 }
 
+Write-Output 'Сортируем раздачи по давности закачки' 
+$clients_torrents = $clients_torrents | Sort-Object -Property completion_on
+
+$fix = 'N'
 $paths = @{}
 $cnt = 0
+
 foreach ( $torrent in $client_torrents ) {
     $cnt++
     Write-Progress -Activity 'Ищу' -Status $torrent.name -PercentComplete ( $cnt * 100 / $client_torrents.Count )
     if (!$paths[$torrent.content_path] ) { $paths[$torrent.content_path] = $torrent.name }
     else {
-        Write-Output '-------------------------------'
-        Write-Output $torrent.content_path
-        Write-Output $paths[$torrent.content_path]
-        Write-Output $torrent.name
-        Write-Output '-------------------------------'
+        Write-Output ( 'Совпадение целевого пути ' + $torrent.content_path )
+        Write-Output ( 'Раздача 1: ' + $paths[$torrent.content_path] )
+        Write-Output ( 'Раздача 2: ' + $torrent.name )
+        
+        if ( $fix -ne 'A') {
+            $fix = Get-String $true 'Исправить? [Y]es/[N]o/[A]ll'
+        }
+
+        if ( $fix -ne 'N' ) {
+            if ( $null -eq $torrent.topic_id ) {
+                Write-Output 'Получаем ID раздачи из комментария к ней'
+                $torrents_tmp = @( $torrent )
+                Get-TopicIDs $clients[$torrent.client_key] $torrents_tmp
+                $torrent.topic_id = $torrents_tmp[0].topic_id
+            }
+            $torrent.content_path = $torrent.content_path + '_' + $torrent.topic_id
+            Set-SaveLocation $clients[$torrent.client_key] $torrent $torrent.content_path $true
+            Write-Log 'Подождём окончания перемещения'
+            Start-Sleep -Seconds 2
+            while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'moving*' ) {
+                Start-Sleep -Seconds 2
+            }
+            Write-Log ( 'Отправляем в рехэш ' + $torrent.name )
+            Start-Rehash $clients[$torrent.client_key] $torrent.hash
+            Write-Log 'Подождём окончания рехэша'
+            Start-Sleep -Seconds 5
+            while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'checking*' ) {
+                Start-Sleep -Seconds 5
+            }
+        }
     }
 }
 Write-Progress -Activity 'Ищу' -Completed

@@ -626,7 +626,7 @@ function Get-Disk ( $obligatory, $prompt ) {
     return $disk
 }
 function  Set-SaveLocation ( $client, $torrent, $new_path, $verbose = $false) {
-    if ( $verbose ) { Write-Host ( 'Перемещаем ' + $torrent.name ) }
+    if ( $verbose ) { Write-Host ( 'Перемещаем ' + $torrent.name + ' в ' + $new_path) }
     $data = @{
         hashes   = $torrent.hash
         location = $new_path
