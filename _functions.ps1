@@ -153,6 +153,27 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null,
     }
 }
 
+function  Get-TorrentFiles ( $client, $hash = $null, $verbose = $true) {
+    $Params = @{}
+        $Params.hash = $hash
+        if ( $verbose -eq $true ) { Write-Log ( 'Получаем инфо о содержимом раздачи ' ) }
+    while ( $true ) {
+        try {
+            $torrent_files = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/files' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
+                Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
+                Where-Object { $_.save_path -match ('^' + $dsk ) }
+        }
+        catch {
+            Initialize-Client $client $false $true
+            $torrent_files = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/files' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
+                Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
+                Where-Object { $_.save_path -match ('^' + $dsk ) }
+        }
+        if ( !$torrents_files ) { $torrents_files = @() }
+        return $torrent_files
+    }
+}
+
 function Get-TopicIDs ( $client, $torrent_list ) {
     Write-Host 'Ищем ID'
     if ( $torrent_list.count -gt 0 ) {
@@ -300,12 +321,10 @@ function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
         if ( $deleteFiles -eq $true ) {
             $text = 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' вместе с файлами'
             Write-Host $text
-            # if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
         }
         else {
             $text = 'Удаляем из клиента ' + $client.Name + ' раздачу ' + $hash + ' без удаления файлов'
             Write-Host $text
-            # if ( $nul -ne $tg_token -and '' -ne $tg_token ) { Send-TGMessage $text $tg_token $tg_chat }
         }
         $request_delete = @{
             hashes      = $hash
@@ -655,6 +674,23 @@ function  Rename-Folder ( $client, $torrent, $old_path, $new_path, $verbose = $f
         $client.sid = $null
         Initialize-Client $client
         Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+}
+
+function  Rename-File ( $client, $torrent, $old_path, $new_path, $verbose = $false) {
+    if ( $verbose ) { Write-Host ( 'Переназываем ' + $torrent.name + ' в ' + $new_path) }
+    $data = @{
+        hash  = $torrent.hash
+        oldPath = $old_path
+        newPath = $new_path
+    }
+    try {
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFile' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+    catch {
+        $client.sid = $null
+        Initialize-Client $client
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFile' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
 }
 

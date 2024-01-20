@@ -54,7 +54,9 @@ foreach ($clientkey in $clients.Keys ) {
 Write-Output 'Сортируем раздачи по давности закачки' 
 $clients_torrents = $clients_torrents | Sort-Object -Property completion_on
 
-$paths = @{}
+if ( $separator -eq '/' ) { $paths = [hashtable]::new() }
+else { $paths = @{} }
+
 $fix = 'N'
 $cnt = 0
 
@@ -87,10 +89,12 @@ foreach ( $torrent in $client_torrents ) {
                     $torrent.$topic_id = $i.ToString()
                 }
             }
-            # $torrent.content_path = $torrent.content_path + '_' + $torrent.topic_id
-            # Set-SaveLocation $clients[$torrent.client_key] $torrent $torrent.content_path $true
-
-            Rename-Folder $clients[$torrent.client_key] $torrent ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) )  ( ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) ) + '_' + $torrent.topic_id ) $true
+            if ( ( Get-TorrentFiles $client $torrent.hash $true).count -gt 1 ) {
+                Rename-Folder $clients[$torrent.client_key] $torrent ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) )  ( ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) ) + '_' + $torrent.topic_id ) $true
+            }
+            else {
+                Rename-File $clients[$torrent.client_key] $torrent ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) )  ( ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) ) + '_' + $torrent.topic_id ) $true
+            }
             Write-Log 'Подождём окончания перемещения'
             Start-Sleep -Seconds 2
             while ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).state -like 'moving*' ) {
