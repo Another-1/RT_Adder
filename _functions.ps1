@@ -641,6 +641,23 @@ function  Set-SaveLocation ( $client, $torrent, $new_path, $verbose = $false) {
     }
 }
 
+function  Rename-Folder ( $client, $torrent, $old_path, $new_path, $verbose = $false) {
+    if ( $verbose ) { Write-Host ( 'Переназываем ' + $torrent.name + ' в ' + $new_path) }
+    $data = @{
+        hashes  = $torrent.hash
+        oldPath = $old_path
+        newPath = $new_path
+    }
+    try {
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+    catch {
+        $client.sid = $null
+        Initialize-Client $client
+        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+    }
+}
+
 function  Set-TorrentCategory ( $client, $torrent, $category, $verbose = $false ) {
     if ( $verbose ) { Write-Host ( 'Категоризируем ' + $torrent.name ) }
     $data = @{
