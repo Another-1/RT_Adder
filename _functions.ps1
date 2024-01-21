@@ -119,6 +119,7 @@ function Initialize-Client ($client, $verbose = $true, $force = $false ) {
         catch {
             if ( !$Retry ) {
                 Write-Host ( '[client] Не удалось авторизоваться в клиенте, прерываем. Ошибка: {0}.' -f $Error[0] ) -ForegroundColor Red
+                Send-TGMessage ( 'Нет связи с клиентом ' + $client.Name + '. Adder остановлен.' ) $tg_token $tg_chat
                 Exit
             }
         }
@@ -136,6 +137,7 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null,
     }
     elseif ( $verbose -eq $true ) { Write-Log ( 'Получаем список раздач от клиента ' + $client.Name ) }
     if ( $disk -ne '') { $dsk = $disk + ':\\' } else { $dsk = '' }
+    $i = 0
     while ( $true ) {
         try {
             $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
@@ -148,9 +150,13 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null,
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
-        if ( !$torrents_list ) { $torrents_list = @() }
-        return $torrents_list
+        if ( $torrents_list -or $i -gt 3 ) { break }
     }
+    if ( !$torrents_list ) { 
+        Send-TGMessage ( 'Нет связи с клиентом ' + $client.Name + '. Adder остановлен.' ) $tg_token $tg_chat
+     }
+    return $torrents_list
+
 }
 
 function  Get-TorrentFiles ( $client, $hash = $null, $verbose = $true) {
