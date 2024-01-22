@@ -7,7 +7,7 @@ $rehash_freshes = 'N' # (отправлять или нет в рехэш раз
 $wait_finish = 'Y' # (ожидать ли окончания рехэша раздач с отчётом в телеграм и в журнал о найденных битых и с простановкой им тега "Битая")
 $mix_clients = 'N' # перемешивать раздачи перед отправкой в рехэш для равномерной загрузки клиентов
 $check_state_delay = 5 # задержка в секундах перед опросом состояния после отправки в рехэш. Должнать быть больше или равна интервалу обновления интерфейса кубита.
-
+$start_errored -eq 'Y' # запускать ли на докачку раздачи с ошибкой рехэша
 # Code
 $str = 'Подгружаем функции' 
 if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str ) }
@@ -182,8 +182,10 @@ foreach ( $torrent in $full_data_sorted ) {
             Start-Sleep -Seconds 5
         }
         if ( ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress -lt 1 ) {
-            Write-Log ( 'Раздача ' + $torrent.name + ' битая! Запускаем докачку. Полнота: ' + ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress )
-            Start-Torrents $torrent.hash $clients[$torrent.client_key]
+            Write-Log ( 'Раздача ' + $torrent.name + ' битая! Полнота: ' + ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress )
+            if ( $start_errored -eq 'Y' ) {
+                Start-Torrents $torrent.hash $clients[$torrent.client_key]
+            }
             Set-Comment $clients[$torrent.client_key] $torrent 'Битая'
             $message = 'Битая раздача ' + $torrent.name + ' в клиенте http://' + $clients[$torrent.client_key].IP + ':' + $clients[$torrent.client_key].Port + ' , Полнота: ' + ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress
             Send-TGMessage $message $tg_token $tg_chat
