@@ -185,7 +185,7 @@ foreach ( $torrent in $full_data_sorted ) {
             Write-Log ( 'Раздача ' + $torrent.name + ' битая! Запускаем докачку. Полнота: ' + ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress )
             Start-Torrents $torrent.hash $clients[$torrent.client_key]
             Set-Comment $clients[$torrent.client_key] $torrent 'Битая'
-            $message = 'Битая раздача ' + $torrent.name + ' в клиенте http://' + $clients[$torrent.client_key].IP + ':' + $clients[$torrent.client_key].Port + ' , процент полноты: ' + ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress
+            $message = 'Битая раздача ' + $torrent.name + ' в клиенте http://' + $clients[$torrent.client_key].IP + ':' + $clients[$torrent.client_key].Port + ' , Полнота: ' + ( Get-Torrents $clients[$torrent.client_key] '' $false $torrent.hash $null $false ).progress
             Send-TGMessage $message $tg_token $tg_chat
         }
         else {
