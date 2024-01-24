@@ -119,7 +119,7 @@ function Initialize-Client ($client, $verbose = $true, $force = $false ) {
         catch {
             if ( !$Retry ) {
                 Write-Host ( '[client] Не удалось авторизоваться в клиенте, прерываем. Ошибка: {0}.' -f $Error[0] ) -ForegroundColor Red
-                Send-TGMessage ( 'Нет связи с клиентом ' + $client.Name + '. Adder остановлен.' ) $tg_token $tg_chat
+                Send-TGMessage ( 'Нет связи с клиентом ' + $client.Name + '. Процесс остановлен.' ) $tg_token $tg_chat
                 Exit
             }
         }
