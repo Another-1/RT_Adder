@@ -44,7 +44,7 @@ foreach ($clientkey in $clients.Keys ) {
     Write-Output ( 'Обрабатываем клиент ' + $clients[$clientkey].Name )
     Initialize-Client $client $false
     $client_address = ( $client.ip -match '^\d*\.\d*\.\d*\.\d*$') ? $client.ip : ( 'http://' + $client.ip )
-    Write-Output 'Подключаемся к клиенту ' + $clients[$clientkey].Name + ' по адресу ' + $client_address
+    Write-Output ( 'Подключаемся к клиенту ' + $clients[$clientkey].Name + ' по адресу ' + $client_address + ':' + $client.Port )
     $client_data = ( ( Invoke-WebRequest -Uri ( $client_address + ':' + $client.Port + '/api/v2/sync/maindata') -WebSession $client.sid ).Content | ConvertFrom-Json -AsHashtable )
     $row = [PSCustomObject]@{ address = ( 'http://' + $client.IP + ':' + $client.Port ) }
     $cl_version = ( Invoke-WebRequest -Uri ( $client_address + ':' + $client.Port + '/api/v2/app/version') -WebSession $client.sid ).Content 
@@ -70,4 +70,4 @@ foreach ($clientkey in $clients.Keys ) {
     $row | Add-Member -Name 'time_in_queue' -MemberType NoteProperty -Value $client_data.server_state.average_time_queue
     $result.Add( $row ) | Out-Null
 }
-$result | Export-Csv -Path $csv_path -Force -Delimiter ';'
+$result | Export-Csv -Path $csv_path -Force -Delimiter ','
