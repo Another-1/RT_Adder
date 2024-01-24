@@ -43,9 +43,10 @@ foreach ($clientkey in $clients.Keys ) {
     $client = $clients[$clientkey]
     Write-Output ( 'Обрабатываем клиент ' + $clients[$clientkey].Name )
     Initialize-Client $client $false
-    $client_data = ( ( Invoke-WebRequest -Uri ( $client.IP + ':' + $client.Port + '/api/v2/sync/maindata') -WebSession $client.sid ).Content | ConvertFrom-Json -AsHashtable )
+    $client_address = ( $client.ip -match '^\d*\.\d*\.\d*\.\d*$') ? $client.ip : ( 'http://' + $client.ip )
+    $client_data = ( ( Invoke-WebRequest -Uri ( $client_address + ':' + $client.Port + '/api/v2/sync/maindata') -WebSession $client.sid ).Content | ConvertFrom-Json -AsHashtable )
     $row = [PSCustomObject]@{ address = ( 'http://' + $client.IP + ':' + $client.Port ) }
-    $cl_version = ( Invoke-WebRequest -Uri ( $client.IP + ':' + $client.Port + '/api/v2/app/version') -WebSession $client.sid ).Content 
+    $cl_version = ( Invoke-WebRequest -Uri ( $client_address + ':' + $client.Port + '/api/v2/app/version') -WebSession $client.sid ).Content 
     $row | Add-Member -Name 'version' -MemberType NoteProperty -Value $cl_version
     $client_total = $client_data.torrents.Count
     $row | Add-Member -Name 'total' -MemberType NoteProperty -Value $client_total
@@ -61,10 +62,10 @@ foreach ($clientkey in $clients.Keys ) {
     $row | Add-Member -Name 'trackerless' -MemberType NoteProperty -Value $client_trackerless
     $row | Add-Member -Name 'ratio' -MemberType NoteProperty -Value $client_data.server_state.global_ratio
     $row | Add-Member -Name 'dht' -MemberType NoteProperty -Value $client_data.server_state.dht_nodes
-    $row | Add-Member -Name 'free_space' -MemberType NoteProperty -Value $client_data.server_state.free_space_on_disk
+    $row | Add-Member -Name 'free_space' -MemberType NoteProperty -Value ( [math]::Round( $client_data.server_state.free_space_on_disk / 1024 / 1024 / 1024 ) )
     $row | Add-Member -Name 'peers' -MemberType NoteProperty -Value $client_data.server_state.total_peer_connections
     $row | Add-Member -Name 'cache_hits' -MemberType NoteProperty -Value $client_data.server_state.read_cache_hits
-    $row | Add-Member -Name 'buffer_size' -MemberType NoteProperty -Value $client_data.server_state.total_buffers_size
+    $row | Add-Member -Name 'buffer_size' -MemberType NoteProperty -Value ( [math]::Round( $client_data.server_state.total_buffers_size  / 1024 / 1024 / 1024 ) )
     $row | Add-Member -Name 'time_in_queue' -MemberType NoteProperty -Value $client_data.server_state.average_time_queue
     $result.Add( $row ) | Out-Null
 }
