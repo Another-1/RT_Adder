@@ -828,11 +828,11 @@ function Switch-Filtering ( $client, $enable = $true ) {
 
 function Test-Version ( $name ) {
     $separator = Get-Separator
-    $old_hash = Get-FileHash -Path ( $PSScriptRoot + $separator + $name )
+    $old_hash = ( Get-FileHash -Path ( $PSScriptRoot + $separator + $name ) ).Hash
     $new_file_path = ( $PSScriptRoot + $separator + $name.replace( '.ps1', '.new' ) )
     Invoke-WebRequest -Uri ( 'https://raw.githubusercontent.com/Another-1/RT_Adder/main/' + $name ) -OutFile $new_file_path | Out-Null
     if ( Test-Path $new_file_path ) {
-        $new_hash = Get-FileHash -Path $new_file_path
+        $new_hash = ( Get-FileHash -Path $new_file_path ).Hash
         if ( $old_hash -ne $new_hash ) {
             Write-Log "$name обновился! Рекомендуется скачать новую версию." $true
             Remove-Item $new_file_path
