@@ -7,6 +7,9 @@ If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
 Write-Host 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
 
+Test-Version ( $PSCommandPath | Split-Path -Leaf )
+Test-Version ( '_functions.ps1' )
+
 if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue) ) ) {
     Write-Output 'Не установлен модуль PSIni для чтения настроек Web-TLO, ставим...'
     Install-Module -Name PsIni -Scope CurrentUser -Force
@@ -39,7 +42,7 @@ $category = Get-String $false 'Укажите категорию (при нео�
 Initialize-Client $client
 if ( $client.sid ) {
     $i = 0
-    $torrents_list = Get-Torrents $client '' | Where-Object { $_.save_path -match "${path_from}" }
+    $torrents_list = Get-Torrents $client '' | Where-Object { $_.save_path -like "*${path_from}*" }
     if ( $category -and $category -ne '' ) {
         $torrents_list = $torrents_list  | Where-Object { $_.category -eq "${category}" }
     }
