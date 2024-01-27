@@ -48,7 +48,7 @@ if ( $client.sid ) {
     }
     foreach ( $torrent in $torrents_list) {
         $i++
-        $new_path = $torrent.save_path -replace ( $path_from, $path_to )
+        $new_path = $torrent.save_path.replace( $path_from, $path_to )
         if ( $new_path -ne $torrent.save_path ) {
             Set-SaveLocation $client $torrent $new_path
             Write-Progress -Activity 'Moving' -Status $torrent.name -PercentComplete ( $i * 100 / $torrents_list.Count )
