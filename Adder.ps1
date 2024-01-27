@@ -7,6 +7,9 @@ If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
 Write-Output 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
 
+Test-Version ( $PSCommandPath | Split-Path -Leaf )
+Test-Version ( '_functions.ps1' )
+
 try { . "$PSScriptRoot\_client_ssd.ps1" }
 catch { }
 

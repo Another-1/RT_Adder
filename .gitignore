@@ -16,3 +16,4 @@ starts.db
 rehasher.lck
 data.csv
 ipfiler.dat
+*.new

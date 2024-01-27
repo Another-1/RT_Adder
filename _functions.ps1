@@ -18,7 +18,7 @@ function Send-TGMessage ( $message, $token, $chat_id ) {
         "text"                     = $message
     }
     
-    Invoke-WebRequest -Uri ("https://api.telegram.org/bot{0}/sendMessage" -f $token) -Method Post  -ContentType "application/json;charset=utf-8" -Body (ConvertTo-Json -Compress -InputObject $payload) | Out-Null
+    Invoke-WebRequest -Uri ("https://api.telegram.org/bot{0}/sendMessage" -f $token) -Method Post -ContentType "application/json;charset=utf-8" -Body (ConvertTo-Json -Compress -InputObject $payload) | Out-Null
 }
 
 function Send-TGReport ( $refreshed, $added, $obsolete, $token, $chat_id ) {
@@ -140,38 +140,44 @@ function  Get-Torrents ( $client, $disk = '', $Completed = $true, $hash = $null,
     $i = 0
     while ( $true ) {
         try {
-            $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
+            $json_content = ( Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content
+            $torrents_list = $json_content | ConvertFrom-Json | `
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress, tracker | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch {
             Initialize-Client $client $false $true
-            $torrents_list = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
+            $json_content = ( Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/info' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content
+            $torrents_list = $json_content | ConvertFrom-Json | `
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress, tracker | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
+            $i++
         }
-        if ( $torrents_list -or $i -gt 3 ) { break }
+        if ( $json_content -or $i -gt 3 ) { break }
     }
-    if ( !$torrents_list ) { 
+    if ( !$json_content ) { 
         Send-TGMessage ( 'Нет связи с клиентом ' + $client.Name + '. Adder остановлен.' ) $tg_token $tg_chat
-     }
+    }
+    if ( !$torrents_list ) {
+        $torrents_list = @()
+    }
     return $torrents_list
 
 }
 
 function  Get-TorrentFiles ( $client, $hash = $null, $verbose = $true) {
     $Params = @{}
-        $Params.hash = $hash
-        if ( $verbose -eq $true ) { Write-Log ( 'Получаем инфо о содержимом раздачи ' ) }
+    $Params.hash = $hash
+    if ( $verbose -eq $true ) { Write-Log ( 'Получаем инфо о содержимом раздачи ' ) }
     while ( $true ) {
         try {
-            $torrent_files = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/files' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
+            $torrent_files = ( Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/files' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
         catch {
             Initialize-Client $client $false $true
-            $torrent_files = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/files' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
+            $torrent_files = ( Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/files' ) -WebSession $client.sid -Body $params -TimeoutSec 30 ).Content | ConvertFrom-Json | `
                 Select-Object name, hash, save_path, content_path, category, state, uploaded, @{ N = 'topic_id'; E = { $nul } }, @{ N = 'client_key'; E = { $client_key } }, infohash_v1, size, completion_on, progress | `
                 Where-Object { $_.save_path -match ('^' + $dsk ) }
         }
@@ -188,11 +194,11 @@ function Get-TopicIDs ( $client, $torrent_list ) {
             if ( $nul -eq $_.topic_id ) {
                 $Params = @{ hash = $_.hash }
                 try {
-                    $comment = ( Invoke-WebRequest -uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
+                    $comment = ( Invoke-WebRequest -Uri ( $client.IP + ':' + $client.Port + '/api/v2/torrents/properties' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json | Select-Object comment -ExpandProperty comment
                     Start-Sleep -Milliseconds 10
                 }
                 catch {
-                    pause
+                    Pause
                 }
                 $_.topic_id = ( Select-String "\d*$" -InputObject $comment ).Matches.Value
             }
@@ -247,15 +253,15 @@ function Get-ForumTorrentFile ( [int]$Id, $save_path = $null) {
         try { 
             if ( [bool]$forum.ProxyURL ) {
                 if ( $proxycred ) {
-                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -SkipHttpErrorCheck -ProxyCredential $proxyCred
+                    Invoke-WebRequest -Uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -SkipHttpErrorCheck -ProxyCredential $proxyCred
                 }
                 else {
-                    Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -SkipHttpErrorCheck
+                    Invoke-WebRequest -Uri $get_url -WebSession $forum.sid -OutFile $Path -Proxy $forum.ProxyURL -MaximumRedirection 999 -SkipHttpErrorCheck
                 }
                 break
             }
             else {
-                Invoke-WebRequest -uri $get_url -WebSession $forum.sid -OutFile $Path -MaximumRedirection 999 -SkipHttpErrorCheck
+                Invoke-WebRequest -Uri $get_url -WebSession $forum.sid -OutFile $Path -MaximumRedirection 999 -SkipHttpErrorCheck
                 break
             }
         }
@@ -336,7 +342,7 @@ function Remove-ClientTorrent ( $client, $hash, $deleteFiles ) {
             hashes      = $hash
             deleteFiles = $deleteFiles
         }
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/delete' ) -WebSession $client.sid -Body $request_delete -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/delete' ) -WebSession $client.sid -Body $request_delete -Method POST | Out-Null
     }
     catch {
         Write-Host ( '[delete] Почему-то не получилось удалить раздачу {0}.' -f $torrent_id )
@@ -465,12 +471,12 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
         Write-Host 'Не нахожу такого файла, проверьте ввод' -ForegroundColor Red
     }
 
-    if ( ( $prompt = Read-host -Prompt "Максимальное кол-во сидов для скачивания раздачи [$max_seeds]" ) -ne '' ) {
+    if ( ( $prompt = Read-Host -Prompt "Максимальное кол-во сидов для скачивания раздачи [$max_seeds]" ) -ne '' ) {
         $max_seeds = [int]$prompt
     }
 
     while ( $true ) {
-        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из НЕскрытых разделов Web-TLO? (Y/N) [$get_shown]" ) -ne '' ) {
+        If ( ( $prompt = Read-Host -Prompt "Скачивать раздачи из НЕскрытых разделов Web-TLO? (Y/N) [$get_shown]" ) -ne '' ) {
             $get_shown = $prompt.ToUpper() 
         }
         If ( $get_shown -match '^[Y|N]$' ) { break }
@@ -478,7 +484,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
     }
 
     while ( $true ) {
-        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из скрытых разделов Web-TLO? (Y/N) [$get_hidden]" ) -ne '' ) {
+        If ( ( $prompt = Read-Host -Prompt "Скачивать раздачи из скрытых разделов Web-TLO? (Y/N) [$get_hidden]" ) -ne '' ) {
             $get_hidden = $prompt.ToUpper() 
         }
         If ( $get_hidden -match '^[Y|N]$' ) { break }
@@ -486,7 +492,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
     }
 
     while ( $true ) {
-        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи из чёрного списка Web-TLO? (Y/N) [$get_blacklist]" ) -ne '' ) {
+        If ( ( $prompt = Read-Host -Prompt "Скачивать раздачи из чёрного списка Web-TLO? (Y/N) [$get_blacklist]" ) -ne '' ) {
             $get_blacklist = $prompt.ToUpper() 
         }
         If ( $get_blacklist -match '^[Y|N]$' ) { break }
@@ -494,7 +500,7 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
     }
 
     while ( $true ) {
-        If ( ( $prompt = Read-host -Prompt "Скачивать новые раздачи? (Y/N) [$get_news]" ) -ne '' ) {
+        If ( ( $prompt = Read-Host -Prompt "Скачивать новые раздачи? (Y/N) [$get_news]" ) -ne '' ) {
             $get_news = $prompt.ToUpper() 
         }
         If ( $get_news -match '^[Y|N]$' ) { break }
@@ -502,16 +508,16 @@ function Set-Preferences ( $tlo_path, $max_seeds, $get_hidden, $get_blacklist, $
     }
 
     while ( $true ) {
-        If ( ( $prompt = Read-host -Prompt "Скачивать раздачи c низким приоритетом? (Y/N) [$get_lows]" ) -ne '' ) {
+        If ( ( $prompt = Read-Host -Prompt "Скачивать раздачи c низким приоритетом? (Y/N) [$get_lows]" ) -ne '' ) {
             $get_lows = $prompt.ToUpper() 
         }
         If ( $get_lows -match '^[Y|N]$' ) { break }
         Write-Host 'Я ничего не понял, проверьте ввод' -ForegroundColor Red
     }
 
-    if ( ( $prompt = Read-host -Prompt "Токен бота Telegram, если нужна отправка событий в Telegram. Если не нужно, оставить пустым" ) -ne '' ) {
+    if ( ( $prompt = Read-Host -Prompt "Токен бота Telegram, если нужна отправка событий в Telegram. Если не нужно, оставить пустым" ) -ne '' ) {
         $tg_token = $prompt
-        if ( ( $prompt = Read-host -Prompt "Номер чата для отправки сообщений Telegram" ) -ne '' ) {
+        if ( ( $prompt = Read-Host -Prompt "Номер чата для отправки сообщений Telegram" ) -ne '' ) {
             $tg_chat = $prompt
         }
     }
@@ -528,7 +534,7 @@ function Get-Separator {
 
 function  Open-Database( $db_path, $verbose = $true ) {
     if ( $verbose ) { Write-Log ( 'Путь к базе данных: ' + $db_path ) }
-    $conn = New-SqliteConnection -DataSource $db_path
+    $conn = New-SQLiteConnection -DataSource $db_path
     return $conn
 }
 
@@ -657,46 +663,46 @@ function  Set-SaveLocation ( $client, $torrent, $new_path, $verbose = $false) {
         location = $new_path
     }
     try {
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
     catch {
         $client.sid = $null
         Initialize-Client $client
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setLocation' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
 }
 
 function  Rename-Folder ( $client, $torrent, $old_path, $new_path, $verbose = $false) {
     if ( $verbose ) { Write-Host ( 'Переназываем ' + $torrent.name + ' в ' + $new_path) }
     $data = @{
-        hash  = $torrent.hash
+        hash    = $torrent.hash
         oldPath = $old_path
         newPath = $new_path
     }
     try {
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
     catch {
         $client.sid = $null
         Initialize-Client $client
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFolder' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
 }
 
 function  Rename-File ( $client, $torrent, $old_path, $new_path, $verbose = $false) {
     if ( $verbose ) { Write-Host ( 'Переназываем ' + $torrent.name + ' в ' + $new_path) }
     $data = @{
-        hash  = $torrent.hash
+        hash    = $torrent.hash
         oldPath = $old_path
         newPath = $new_path
     }
     try {
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFile' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFile' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
     catch {
         $client.sid = $null
         Initialize-Client $client
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFile' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/renameFile' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
 }
 
@@ -707,12 +713,12 @@ function  Set-TorrentCategory ( $client, $torrent, $category, $verbose = $false 
         category = $category
     }
     try {
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setCategory' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setCategory' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
     catch {
         $client.sid = $null
         Initialize-Client $client
-        Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setCategory' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
+        Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/setCategory' ) -WebSession $client.sid -Body $data -Method POST | Out-Null
     }
 }
 
@@ -735,7 +741,7 @@ function Get-Clients {
             $i++
         }
     } 
-        return $clients
+    return $clients
 }
 
 function Set-Comment ( $client, $torrent, $label ) {
@@ -758,7 +764,7 @@ function Get-ClienDetails {
 
 function Get-TorrentTrackers ( $client, $hash ) {
     $params = @{ hash = $hash }
-    $trackers = ( Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/trackers' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json
+    $trackers = ( Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/trackers' ) -WebSession $client.sid -Body $params ).Content | ConvertFrom-Json
     return $trackers
 }
 
@@ -770,7 +776,7 @@ function Get-TorrentInfo ( $id ) {
 
     while ( $true ) {
         try {
-            $torinfo = ( ( Invoke-WebRequest -uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id
+            $torinfo = ( ( Invoke-WebRequest -Uri ( 'https://api.rutracker.cc/v1/get_tor_topic_data' ) -Body $params ).Content | ConvertFrom-Json ).result.$id
             $name = $torinfo.topic_title
             $size = $torinfo.size
             break
@@ -789,7 +795,7 @@ function Edit-Tracker ( $client, $hash, $origUrl, $newUrl ) {
         origUrl = $origUrl
         newUrl  = $newUrl
     }
-    Invoke-WebRequest -uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/editTracker' ) -WebSession $client.sid -Body $params  -Method Post | out-null
+    Invoke-WebRequest -Uri ( $client.ip + ':' + $client.Port + '/api/v2/torrents/editTracker' ) -WebSession $client.sid -Body $params -Method Post | Out-Null
 }
 
 Function Get-ClientSetting( $client, $setting ) {
@@ -805,15 +811,31 @@ Function Set-ClientSetting ( $client, $param, $value ) {
 
 }
 
-function Write-Log ( $str ) {
+function Write-Log ( $str, $red = $false ) {
     if ( $use_timestamp -ne 'Y' ) {
-        Write-Host $str
+        if ( $red ) { Write-Host $str -ForegroundColor Red }
+        else { Write-Host $str }
     }
     else {
-        Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str )
+        if ( $red ) { Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str ) -ForegroundColor Red }
+        else { Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str ) }
     }
 }
 
 function Switch-Filtering ( $client, $enable = $true ) {
     Set-ClientSetting $client 'ip_filter_enabled' $enable
+}
+
+function Test-Version ( $name ) {
+    $separator = Get-Separator
+    $old_hash = Get-FileHash -Path ( $PSScriptRoot + $separator + $name )
+    $new_file_path = ( $PSScriptRoot + $separator + $name.replace( '.ps1', '.new' ) )
+    Invoke-WebRequest -Uri ( 'https://raw.githubusercontent.com/Another-1/RT_Adder/main/' + $name ) -OutFile $new_file_path | Out-Null
+    if ( Test-Path $new_file_path ) {
+        $new_hash = Get-FileHash -Path $new_file_path
+        if ( $old_hash -ne $new_hash ) {
+            Write-Log "$name обновился! Рекомендуется скачать новую версию." $true
+            Remove-Item $new_file_path
+        }
+    }
 }
