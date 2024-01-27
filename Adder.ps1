@@ -443,6 +443,8 @@ if ( $report_stalled -eq 'Y' ) {
     $clients_torrents | Where-Object { $_.state -eq 'stalledDL' -and $_.added_on -le $month_ago } | ForEach-Object {
         $ids = $( $ids -eq '' ? $_.topic_id : ( $ids + ',' + $_.topic_id ) )
     }
-    $params = @{'help_load' = $ids }
-    Invoke-WebRequest -Method POST -Uri 'https://rutr.my.to/rto_api.php' -Body $params
+    if ( $ids -ne '' ) {
+        $params = @{'help_load' = $ids }
+        Invoke-WebRequest -Method POST -Uri 'https://rutr.my.to/rto_api.php' -Body $params | Out-Null
+    }
 }
