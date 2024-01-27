@@ -438,9 +438,9 @@ If ( Test-Path -Path $report_flag_file ) {
 
 if ( $report_stalled -eq 'Y' ) {
     Write-Log 'Отправляем список некачашек'
-    $week_ago = ( Get-Date -UFormat %s ).ToInt32($null) - 7 * 24 * 60 * 60
+    $month_ago = ( Get-Date -UFormat %s ).ToInt32($null) - 30 * 24 * 60 * 60
     $ids = ''
-    $clients_torrents | Where-Object { $_.state -eq 'stalledDL' -and $_.last_activity -le $week_ago } | ForEach-Object {
+    $clients_torrents | Where-Object { $_.state -eq 'stalledDL' -and $_.added_on -le $month_ago } | ForEach-Object {
         $ids = $( $ids -eq '' ? $_.topic_id : ( $ids + ',' + $_.topic_id ) )
     }
     $Params = @{ hashes = $hash }
