@@ -20,6 +20,9 @@ if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date
 
 . "$PSScriptRoot\_functions.ps1"
 
+Test-Version ( $PSCommandPath | Split-Path -Leaf )
+Test-Version ( '_functions.ps1' )
+
 $separator = Get-Separator
 
 # if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {

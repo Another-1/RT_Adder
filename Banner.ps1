@@ -6,6 +6,9 @@ $ipfilter_source = 'https://bot.keeps.cyou/static/ipfilter.dat'
 Write-Output 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
 
+Test-Version ( $PSCommandPath | Split-Path -Leaf )
+Test-Version ( '_functions.ps1' )
+
 if ( -not ( [bool](Get-InstalledModule -Name PsIni -ErrorAction SilentlyContinue) ) ) {
     Write-Output 'Не установлен модуль PSIni для чтения настроек Web-TLO, ставим...'
     Install-Module -Name PsIni -Scope CurrentUser -Force
