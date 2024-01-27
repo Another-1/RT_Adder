@@ -435,3 +435,4 @@ If ( Test-Path -Path $report_flag_file ) {
     }
     Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
+
