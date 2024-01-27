@@ -450,4 +450,5 @@ if ( $report_stalled -eq 'Y' ) {
         Invoke-WebRequest -Method POST -Uri 'https://rutr.my.to/rto_api.php' -Body $params | Out-Null
         Write-Log 'Готово'
     }
+    else { Write-Log 'А некачашек-то и нет!'}
 }
