@@ -22,6 +22,8 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
     Install-Module -Name PSSQLite -Scope CurrentUser -Force
 }
 
+$use_timestamp = 'N'
+
 If ( -not ( Test-Path "$PSScriptRoot\_settings.ps1" ) ) {
     Set-Preferences # $tlo_path $max_seeds $get_hidden $get_blacklist $get_news $tg_token $tg_chat
 }
@@ -446,5 +448,6 @@ if ( $report_stalled -eq 'Y' ) {
     if ( $ids -ne '' ) {
         $params = @{'help_load' = $ids }
         Invoke-WebRequest -Method POST -Uri 'https://rutr.my.to/rto_api.php' -Body $params | Out-Null
+        Write-Log 'Готово'
     }
 }
