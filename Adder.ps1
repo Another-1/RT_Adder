@@ -22,12 +22,12 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
     Install-Module -Name PSSQLite -Scope CurrentUser -Force
 }
 
-If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" ) ) {
+If ( -not ( Test-Path "$PSScriptRoot\_settings.ps1" ) ) {
     Set-Preferences # $tlo_path $max_seeds $get_hidden $get_blacklist $get_news $tg_token $tg_chat
 }
 else { . "$PSScriptRoot\_settings.ps1" }
 
-If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
+If ( Test-Path "$PSScriptRoot\_masks.ps1" ) {
     Write-Output 'Подтягиваем названия раздач из маскированных разделов'
     . "$PSScriptRoot\_masks.ps1"
     $masks_db = @{}
@@ -55,8 +55,8 @@ If ( Test-path "$PSScriptRoot\_masks.ps1" ) {
     $conn.Close()
 }
 else {
-    Remove-Variable -name masks_like -ErrorAction SilentlyContinue
-    Remove-Variable -name masks_db -ErrorAction SilentlyContinue
+    Remove-Variable -Name masks_like -ErrorAction SilentlyContinue
+    Remove-Variable -Name masks_db -ErrorAction SilentlyContinue
 }
 
 Write-Output 'Читаем настройки Web-TLO'
@@ -75,10 +75,10 @@ if ( $forced_sections ) {
 Write-Output 'Ищем московское время'
 $MoscowTZ = [System.TimeZoneInfo]::FindSystemTimeZoneById("Russian Standard Time")
 $MoscowTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), $MoscowTZ)
-Write-Output ( 'Московское время ' + ( Get-Date($MoscowTime) -uformat %H ) + ' ч ' + ( Get-Date($MoscowTime) -uformat %M ) + ' мин' )
+Write-Output ( 'Московское время ' + ( Get-Date($MoscowTime) -UFormat %H ) + ' ч ' + ( Get-Date($MoscowTime) -UFormat %M ) + ' мин' )
 
 Write-Output 'Проверяем, что в Москве не 4 часа ночи (профилактика)'
-if ( ( Get-Date($MoscowTime) -uformat %H ) -eq '04' ) {
+if ( ( Get-Date($MoscowTime) -UFormat %H ) -eq '04' ) {
     Write-Host 'Профилактические работы на сервере' -ForegroundColor Red
     exit
 }
@@ -436,3 +436,15 @@ If ( Test-Path -Path $report_flag_file ) {
     Remove-Item -Path $report_flag_file -ErrorAction SilentlyContinue
 }
 
+if ( $report_stalled -eq 'Y' ) {
+    Write-Log 'Отправляем список некачашек'
+    $week_ago = ( Get-Date -UFormat %s ).ToInt32($null) - 7 * 24 * 60 * 60
+    $ids = ''
+    $clients_torrents | Where-Object { $_.state -eq 'stalledDL' -and $_.last_activity -le $week_ago } | ForEach-Object {
+        $ids = $( $ids -eq '' ? $_.topic_id : ( $ids + ',' + $_.topic_id ) )
+    }
+    $Params = @{ hashes = $hash }
+    $url = $client.ip + ':' + $client.Port + '/api/v2/torrents/recheck'
+    Invoke-WebRequest -Method POST -Uri $url -WebSession $client.sid -Form $Params -ContentType 'application/x-bittorrent' | Out-Null
+
+}

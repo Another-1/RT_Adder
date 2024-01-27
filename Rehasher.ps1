@@ -10,7 +10,7 @@ $check_state_delay = 5 # задержка в секундах перед опр�
 $start_errored = 'Y' # запускать ли на докачку раздачи с ошибкой рехэша
 # Code
 
-if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1').count -gt 1 ) {
+if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1*').count -gt 1 ) {
     Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
     exit
 }
