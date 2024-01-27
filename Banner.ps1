@@ -39,3 +39,4 @@ foreach ( $client_key in $clients.Keys ) {
  }
 
  Write-Output 'Готово'
+ 
