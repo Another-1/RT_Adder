@@ -21,13 +21,13 @@ if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine 
     exit
 }
 
-if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
-    Write-Host 'Обнаружен файл блокировки, выходим' -ForegroundColor Red
-    exit
-}
+# if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
+#     Write-Host 'Обнаружен файл блокировки, выходим' -ForegroundColor Red
+#     exit
+# }
 
-Write-Log ('Создаём файл блокировки от повторных запусков ' + $PSScriptRoot + $separator + 'rehasher.lck' )
-New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
+# Write-Log ('Создаём файл блокировки от повторных запусков ' + $PSScriptRoot + $separator + 'rehasher.lck' )
+# New-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') -ErrorAction SilentlyContinue | Out-Null
 
 Write-Log 'Проверяем версию Powershell...'
 If ( $PSVersionTable.PSVersion -lt [version]'7.1.0.0') {
@@ -206,4 +206,4 @@ Write-Log ( "Отправлено в рехэш: $sum_cnt раздач объё�
 Write-Log ( 'Осталось: ' + ( $was_count - $sum_cnt ) + ' раздач объёмом ' + [math]::Round( ( $was_sum_size - $sum_size ) / 1024 / 1024 / 1024, 2 ) + ' ГБ' )
 
 $conn.Close()
-Remove-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') | Out-Null
+# Remove-Item -Path ( $PSScriptRoot + $separator + 'rehasher.lck') | Out-Null
