@@ -3,6 +3,7 @@ $ipfilter_path = 'L:\Software\RT_Adder\ipfiler.dat'
 $ipfilter_source = 'https://bot.keeps.cyou/static/ipfilter.dat'
 
 # Code
+$use_timestamp = 'N'
 Write-Output 'Подгружаем функции'
 . "$PSScriptRoot\_functions.ps1"
 
