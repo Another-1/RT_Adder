@@ -725,15 +725,17 @@ function Convert-Path ( $client, $path ) {
 
 function Get-Clients {
     $clients = @{}
-    Write-Host 'Получаем из TLO данные о клиентах'
+    Write-Log 'Получаем из TLO данные о клиентах'
+    $client_count = $ini_data['other'].qt.ToInt16($null)
+    Write-Log "Актуальных клиентов к обработке: $client_count"
+    $i = 1
     $ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
-        $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
-        $clients_sort = [ordered]@{}
-        $clients.GetEnumerator() | Sort-Object -Property key | ForEach-Object { $clients_sort[$_.key] = $clients[$_.key] }
-        $clients = $clients_sort
-        Remove-Variable -Name clients_sort -ErrorAction SilentlyContinue
+        if ( ( $_ | Select-String ( '\d+$' ) ).matches.value.ToInt16($null) -le $client_count ) {
+            $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
+            $i++
+        }
     } 
-    return $clients
+        return $clients
 }
 
 function Set-Comment ( $client, $torrent, $label ) {
@@ -810,4 +812,8 @@ function Write-Log ( $str ) {
     else {
         Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str )
     }
+}
+
+function Switch-Filtering ( $client, $enable = $true ) {
+    Set-ClientSetting $client 'ip_filter_enabled' $enable
 }
