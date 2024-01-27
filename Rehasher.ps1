@@ -16,7 +16,7 @@ if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date
 
 $separator = Get-Separator
 
-if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*Rehasher.ps1').count -gt 1 ) {
+if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1').count -gt 1 ) {
     Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
     exit
 }
