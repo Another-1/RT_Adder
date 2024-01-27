@@ -9,17 +9,18 @@ $mix_clients = 'N' # перемешивать раздачи перед отпр
 $check_state_delay = 5 # задержка в секундах перед опросом состояния после отправки в рехэш. Должнать быть больше или равна интервалу обновления интерфейса кубита.
 $start_errored = 'Y' # запускать ли на докачку раздачи с ошибкой рехэша
 # Code
+
+if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1').count -gt 1 ) {
+    Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
+    exit
+}
+
 $str = 'Подгружаем функции' 
 if ( $use_timestamp -ne 'Y' ) { Write-Host $str } else { Write-Host ( ( Get-Date -Format 'dd-MM-yyyy HH:mm:ss' ) + ' ' + $str ) }
 
 . "$PSScriptRoot\_functions.ps1"
 
 $separator = Get-Separator
-
-if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1').count -gt 1 ) {
-    Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
-    exit
-}
 
 # if ( Test-Path -Path ( $PSScriptRoot + $separator + 'rehasher.lck') ) {
 #     Write-Host 'Обнаружен файл блокировки, выходим' -ForegroundColor Red
