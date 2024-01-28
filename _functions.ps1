@@ -12,7 +12,7 @@ function to_kmg ($bytes, [int]$precision = 0) {
 
 function Get-DB_ColumnNames ($conn) {
     if ( ( ( Invoke-SqliteQuery -Query ( "PRAGMA table_info('topics')" ) -SQLiteConnection $conn ) | Select-Object name -ExpandProperty name | Where-Object { $_ -eq 'ss' } ).count -eq 0 ) {
-        # до 2.5.1
+        # 2.5.1 и выше
         $table_names = @{
             'id'                    = 'id'
             'forum_id'              = 'forum_id'
@@ -30,6 +30,7 @@ function Get-DB_ColumnNames ($conn) {
         }
     }
     else {
+        # до 2.5.1
         $table_names = @{
             'id'                    = 'id'
             'forum_id'              = 'ss'
