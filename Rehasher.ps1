@@ -10,7 +10,7 @@ $check_state_delay = 5 # задержка в секундах перед опр�
 $start_errored = 'Y' # запускать ли на докачку раздачи с ошибкой рехэша
 # Code
 
-if ( ( ( get-process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1*').count -gt 1 ) {
+if ( ( ( Get-Process | Where-Object { $_.ProcessName -eq 'pwsh' } ).CommandLine -like '*ehasher.ps1*').count -gt 1 ) {
     Write-Host 'Я и так уже выполняюсь, выходим' -ForegroundColor Red
     exit
 }
@@ -49,7 +49,7 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
     Install-Module -Name PSSQLite -Scope CurrentUser -Force
 }
 
-If ( -not ( Test-path "$PSScriptRoot\_settings.ps1" )) {
+If ( -not ( Test-Path "$PSScriptRoot\_settings.ps1" )) {
     Set-Preferences # $tlo_path $max_seeds $get_hidden $get_blacklist $get_news $tg_token $tg_chat
 }
 else { . "$PSScriptRoot\_settings.ps1" }
@@ -138,7 +138,7 @@ if ( $mix_clients -eq 'Y') {
     Write-Log 'Тщательнейшим образом перемешиваем клиентов'
     $per_client = @{}
     $full_resorted = [System.Collections.ArrayList]::new()
-    foreach ( $i in  0..( $full_data_sorted | measure-Object -Property client_key -Maximum ).maximum ) { $per_client[$i] = $full_data_sorted | Where-Object { $_.client_key -eq $i } }
+    foreach ( $i in  0..( $full_data_sorted | Measure-Object -Property client_key -Maximum ).maximum ) { $per_client[$i] = $full_data_sorted | Where-Object { $_.client_key -eq $i } }
     
     $done = 0
     $max_qty = ( $per_client.GetEnumerator() | ForEach-Object { $_.Value.count } | Measure-Object -Maximum ).Maximum
