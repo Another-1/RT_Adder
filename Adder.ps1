@@ -40,7 +40,7 @@ If ( Test-Path "$PSScriptRoot\_masks.ps1" ) {
     $masks.GetEnumerator() | ForEach-Object {
         $group_mask = $_.Value
         ( $_.Key -replace ( '\s*', '')).split(',') | ForEach-Object {
-            $db_return = ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ' + $columnNames['forum_id'] + '=' + $_ + ' AND ' +  $columnNames['name'] + ' NOT LIKE "%' + ( ($group_mask -replace ('\s', '%')) -join '%" AND ' + $columnNames['name'] + ' NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn )
+            $db_return = ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ' + $columnNames['forum_id'] + '=' + $_ + ' AND ' + $columnNames['name'] + ' NOT LIKE "%' + ( ($group_mask -replace ('\s', '%')) -join '%" AND ' + $columnNames['name'] + ' NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn )
             if ( $db_return ) {
                 $masks_db[$_] = $db_return.GetEnumerator() | ForEach-Object { @{$_.id.ToString() = 1 } }
                 Write-Output ( 'По разделу ' + $_ + ' найдено ' + $masks_db[$_].count + ' неподходящих раздач' )
@@ -429,6 +429,9 @@ elseif ( $update_stats -ne 'Y' -or !$php_path ) {
 if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -or $notify_nowork -eq 'Y' ) -and $tg_token -ne '' -and $tg_chat -ne '' ) {
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
+elseif ( $report_nowork -eq 'Y' ) { 
+    Send-TGMessage 'Adder отработал, ничего делать не пришлось.' $tg_token $tg_chat
+}
 
 If ( Test-Path -Path $report_flag_file ) {
     if ( $refreshed.Count -gt 0 -or $added.Count -gt 0 ) {
@@ -453,5 +456,5 @@ if ( $report_stalled -eq 'Y' ) {
         Invoke-WebRequest -Method POST -Uri 'https://rutr.my.to/rto_api.php' -Body $params | Out-Null
         Write-Log 'Готово'
     }
-    else { Write-Log 'А некачашек-то и нет!'}
+    else { Write-Log 'А некачашек-то и нет!' }
 }
