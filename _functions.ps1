@@ -10,6 +10,44 @@ function to_kmg ($bytes, [int]$precision = 0) {
     }
 }
 
+function Get-DB_ColumnNames ($conn) {
+    if ( ( ( Invoke-SqliteQuery -Query ( "PRAGMA table_info('topics')" ) -SQLiteConnection $conn ) | Select-Object name -ExpandProperty name | Where-Object { $_ -eq 'ss' } ).count -eq 0 ) {
+        # до 2.5.1
+        $table_names = @{
+            'id'                    = 'id'
+            'forum_id'              = 'forum_id'
+            'name'                  = 'name'
+            'info_hash'             = 'info_hash'
+            'seeders'               = 'seeders'
+            'size'                  = 'size'
+            'status'                = 'status'
+            'reg_time'              = 'reg_time'
+            'seeders_updates_today' = 'seeders_updates_today'
+            'seeders_updates_days'  = 'seeders_updates_days'
+            'keeping_priority'      = 'keeping_priority'
+            'poster'                = 'poster'
+            'seeder_last_seen'      = 'seeder_last_seen'
+        }
+    }
+    else {
+        $table_names = @{
+            'id'                    = 'id'
+            'forum_id'              = 'ss'
+            'name'                  = 'na'
+            'info_hash'             = 'hs'
+            'seeders'               = 'se'
+            'size'                  = 'si'
+            'status'                = 'st'
+            'reg_time'              = 'rt'
+            'seeders_updates_today' = 'qt'
+            'seeders_updates_days'  = 'ds'
+            'keeping_priority'      = 'pt'
+            'poster'                = 'ps'
+            'seeder_last_seen'      = 'ls'
+        }
+    }
+    return $table_names
+}
 function Send-TGMessage ( $message, $token, $chat_id ) {
     $payload = @{
         "chat_id"                  = $chat_id
@@ -570,7 +608,8 @@ function Get-OldBlacklist( $verbose = $true ) {
 function Get-DBHashesBySecton ( $ss ) {
     Write-Host "Запрашиваем список раздач раздела $ss из БД Web-TLO"
     $conn = Open-TLODatabase
-    $query = "SELECT hs FROM Topics WHERE ss = $ss"
+    $columnNames = Get-DB_ColumnNames $conn
+    $query = 'SELECT ' + $columnNames['info_hash'] + ' FROM Topics WHERE ' + $columnNames['forum_id'] + "= $ss"
     $topics = Invoke-SqliteQuery -Query $query -SQLiteConnection $conn
     $conn.Close()
     return $topics

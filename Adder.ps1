@@ -22,12 +22,12 @@ if ( -not ( [bool](Get-InstalledModule -Name PSSQLite -ErrorAction SilentlyConti
     Install-Module -Name PSSQLite -Scope CurrentUser -Force
 }
 
-$use_timestamp = 'N'
-
 If ( -not ( Test-Path "$PSScriptRoot\_settings.ps1" ) ) {
     Set-Preferences # $tlo_path $max_seeds $get_hidden $get_blacklist $get_news $tg_token $tg_chat
 }
 else { . "$PSScriptRoot\_settings.ps1" }
+
+$use_timestamp = 'N'
 
 If ( Test-Path "$PSScriptRoot\_masks.ps1" ) {
     Write-Output 'Подтягиваем названия раздач из маскированных разделов'
@@ -36,10 +36,11 @@ If ( Test-Path "$PSScriptRoot\_masks.ps1" ) {
     $masks_db_plain = @{}
     $masks_like = @{}
     $conn = Open-TLODatabase
+    $columnNames = Get-DB_ColumnNames $conn
     $masks.GetEnumerator() | ForEach-Object {
         $group_mask = $_.Value
         ( $_.Key -replace ( '\s*', '')).split(',') | ForEach-Object {
-            $db_return = ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ss=' + $_ + ' AND na NOT LIKE "%' + ( ($group_mask -replace ('\s', '%')) -join '%" AND na NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn )
+            $db_return = ( Invoke-SqliteQuery -Query ( 'SELECT id FROM Topics WHERE ' + $columnNames['forum_id'] + '=' + $_ + ' AND ' +  $columnNames['name'] + ' NOT LIKE "%' + ( ($group_mask -replace ('\s', '%')) -join '%" AND ' + $columnNames['name'] + ' NOT LIKE "%' ) + '%"' ) -SQLiteConnection $conn )
             if ( $db_return ) {
                 $masks_db[$_] = $db_return.GetEnumerator() | ForEach-Object { @{$_.id.ToString() = 1 } }
                 Write-Output ( 'По разделу ' + $_ + ' найдено ' + $masks_db[$_].count + ' неподходящих раздач' )
