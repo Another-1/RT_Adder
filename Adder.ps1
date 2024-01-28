@@ -429,7 +429,7 @@ elseif ( $update_stats -ne 'Y' -or !$php_path ) {
 if ( ( $refreshed.Count -gt 0 -or $added.Count -gt 0 -or $obsolete.Count -gt 0 -or $notify_nowork -eq 'Y' ) -and $tg_token -ne '' -and $tg_chat -ne '' ) {
     Send-TGReport $refreshed $added $obsolete $tg_token $tg_chat
 }
-elseif ( $report_nowork -eq 'Y' ) { 
+elseif ( $report_nowork -eq 'Y' -and $tg_token -ne '' -and $tg_chat -ne '' ) { 
     Send-TGMessage 'Adder отработал, ничего делать не пришлось.' $tg_token $tg_chat
 }
 
