@@ -27,24 +27,15 @@ $ini_data = Get-IniContent $ini_path
 
 $clients = @{}
 
-Write-Output 'Получаем из TLO данные о клиентах'
-$client_count = $ini_data['other'].qt.ToInt16($null)
-Write-Output "Актуальных клиентов к обработке: $client_count"
-$i = 1
-$ini_data.keys | Where-Object { $_ -match '^torrent-client' -and $ini_data[$_].client -eq 'qbittorrent' } | ForEach-Object {
-    if ( ( $_ | Select-String ( '\d+$' ) ).matches.value.ToInt16($null) -le $client_count ) {
-        $clients[$ini_data[$_].id] = @{ Login = $ini_data[$_].login; Password = $ini_data[$_].password; Name = $ini_data[$_].comment; IP = $ini_data[$_].hostname; Port = $ini_data[$_].port; }
-        $i++
-    }
-} 
-
+$clients = Get-Clients
 $result = [System.Collections.ArrayList]::new()
+
 foreach ($clientkey in $clients.Keys ) {
     $client = $clients[$clientkey]
-    Write-Output ( 'Обрабатываем клиент ' + $clients[$clientkey].Name )
+    Write-Output ( 'Обрабатываем клиент ' + $clients[$clientkey].Name + ' по адресу ' + $client_address + ':' + $client.Port)
     Initialize-Client $client $false
     $client_address = ( $client.ip -match '^\d*\.\d*\.\d*\.\d*$') ? $client.ip : ( 'http://' + $client.ip )
-    Write-Output ( 'Подключаемся к клиенту ' + $clients[$clientkey].Name + ' по адресу ' + $client_address + ':' + $client.Port )
+    # Write-Output ( 'Подключаемся к клиенту ' + $clients[$clientkey].Name + ' по адресу ' + $client_address + ':' + $client.Port )
     $client_data = ( ( Invoke-WebRequest -Uri ( $client_address + ':' + $client.Port + '/api/v2/sync/maindata') -WebSession $client.sid ).Content | ConvertFrom-Json -AsHashtable )
     $row = [PSCustomObject]@{ address = ( 'http://' + $client.IP + ':' + $client.Port ) }
     $cl_version = ( Invoke-WebRequest -Uri ( $client_address + ':' + $client.Port + '/api/v2/app/version') -WebSession $client.sid ).Content 
