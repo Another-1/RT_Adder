@@ -18,8 +18,9 @@ If ( -not ( Test-Path "$PSScriptRoot\_settings.ps1" ) ) {
 else { . "$PSScriptRoot\_settings.ps1" }
 
 Write-Output 'Скачиваем файл'
-Invoke-WebRequest -Uri $ipfilter_source -OutFile ( $ipfilter_path -replace '\..+?$', '.new' )
-if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path ( $ipfilter_path -replace '\..+?$', '.new' ) ).Hash ) {
+$new_path = $ipfilter_path -replace '\..+?$', '.new'
+Invoke-WebRequest -Uri $ipfilter_source -OutFile $new_path
+if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path $new_path).Hash ) {
     Write-Output 'Файл обновился, перечитываем'
     $use_timestamp = 'N'
     Write-Output 'Подгружаем функции'
@@ -28,6 +29,7 @@ if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path ( $ipfi
     $ini_path = $tlo_path + '\data\config.ini'
     $ini_data = Get-IniContent $ini_path
     $clients = Get-Clients
+    Move-Item -Path $ipfilter_path -Destination $new_path -Force
     foreach ( $client_key in $clients.Keys ) {
         Initialize-Client $clients[$client_key]
         Write-Output ( 'Обновляем фильтр в клиенте ' + $clients[$client_key].Name )
@@ -38,6 +40,7 @@ if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path ( $ipfi
 }
 else {
     Write-Output 'Файл не изменился'
+    Remove-Item $new_path -Force
 }
 Write-Output 'Готово'
  
