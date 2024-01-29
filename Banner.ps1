@@ -23,25 +23,32 @@ else { . "$PSScriptRoot\_settings.ps1" }
 
 Write-Output 'Скачиваем файл'
 $new_path = $ipfilter_path -replace '\..+?$', '.new'
-Invoke-WebRequest -Uri $ipfilter_source -OutFile $new_path
-if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path $new_path).Hash ) {
-    Write-Output 'Файл обновился, перечитываем'
-    Write-Output 'Читаем настройки Web-TLO'
-    $ini_path = $tlo_path + '\data\config.ini'
-    $ini_data = Get-IniContent $ini_path
-    $clients = Get-Clients
-    Move-Item -Path $ipfilter_path -Destination $new_path -Force
-    foreach ( $client_key in $clients.Keys ) {
-        Initialize-Client $clients[$client_key]
-        Write-Output ( 'Обновляем фильтр в клиенте ' + $clients[$client_key].Name )
-        Switch-Filtering $clients[$client_key] $false
-        Start-Sleep -Seconds 1
-        Switch-Filtering $clients[$client_key] $true
+if ( ( Test-Path -Path $ipfilter_path ) ) {
+    Invoke-WebRequest -Uri $ipfilter_source -OutFile $new_path
+    if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path $new_path).Hash ) {
+        Write-Output 'Файл обновился, перечитываем'
+        Write-Output 'Читаем настройки Web-TLO'
+        $ini_path = $tlo_path + '\data\config.ini'
+        $ini_data = Get-IniContent $ini_path
+        $clients = Get-Clients
+        Move-Item -Path $ipfilter_path -Destination $new_path -Force
+        foreach ( $client_key in $clients.Keys ) {
+            Initialize-Client $clients[$client_key]
+            Write-Output ( 'Обновляем фильтр в клиенте ' + $clients[$client_key].Name )
+            Switch-Filtering $clients[$client_key] $false
+            Start-Sleep -Seconds 1
+            Switch-Filtering $clients[$client_key] $true
+        }
+    }
+    else {
+        Write-Output 'Файл не изменился'
+        Remove-Item $new_path -Force
     }
 }
 else {
-    Write-Output 'Файл не изменился'
-    Remove-Item $new_path -Force
+    Write-Output 'Файла вообще ещё нет, скачиваем в первый раз'
+    Invoke-WebRequest -Uri $ipfilter_source -OutFile $ipfilter_path
 }
+
 Write-Output 'Готово'
  
