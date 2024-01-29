@@ -875,7 +875,7 @@ function Test-Version ( $name ) {
         $new_hash = ( Get-FileHash -Path $new_file_path ).Hash
         if ( $old_hash -ne $new_hash ) {
             Write-Log "$name обновился! Рекомендуется скачать новую версию." $true
-            Remove-Item $new_file_path
         }
     }
+    Remove-Item $new_file_path
 }
