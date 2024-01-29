@@ -4,6 +4,10 @@ $ipfilter_source = 'https://bot.keeps.cyou/static/ipfilter.dat'
 
 # Code
 
+$use_timestamp = 'N'
+Write-Output 'Подгружаем функции'
+. "$PSScriptRoot\_functions.ps1"
+
 Test-Version ( $PSCommandPath | Split-Path -Leaf )
 Test-Version ( '_functions.ps1' )
 
@@ -22,9 +26,6 @@ $new_path = $ipfilter_path -replace '\..+?$', '.new'
 Invoke-WebRequest -Uri $ipfilter_source -OutFile $new_path
 if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path $new_path).Hash ) {
     Write-Output 'Файл обновился, перечитываем'
-    $use_timestamp = 'N'
-    Write-Output 'Подгружаем функции'
-    . "$PSScriptRoot\_functions.ps1"
     Write-Output 'Читаем настройки Web-TLO'
     $ini_path = $tlo_path + '\data\config.ini'
     $ini_data = Get-IniContent $ini_path
