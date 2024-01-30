@@ -23,15 +23,15 @@ else { . "$PSScriptRoot\_settings.ps1" }
 
 Write-Output 'Скачиваем файл'
 $new_path = $ipfilter_path -replace '\..+?$', '.new'
-if ( ( Test-Path -Path $ipfilter_path ) ) {
+try {
     Invoke-WebRequest -Uri $ipfilter_source -OutFile $new_path
-    if ( ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path $new_path).Hash ) {
+    if ( -not ( Test-Path -Path $ipfilter_path ) -or ( Get-FileHash -Path $ipfilter_path ).Hash -ne ( Get-FileHash -Path $new_path).Hash ) {
         Write-Output 'Файл обновился, перечитываем'
         Write-Output 'Читаем настройки Web-TLO'
         $ini_path = $tlo_path + '\data\config.ini'
         $ini_data = Get-IniContent $ini_path
         $clients = Get-Clients
-        Move-Item -Path $ipfilter_path -Destination $new_path -Force
+        Move-Item -Path $new_path -Destination $ipfilter_path -Force
         foreach ( $client_key in $clients.Keys ) {
             Initialize-Client $clients[$client_key]
             Write-Output ( 'Обновляем фильтр в клиенте ' + $clients[$client_key].Name )
@@ -45,10 +45,6 @@ if ( ( Test-Path -Path $ipfilter_path ) ) {
         Remove-Item $new_path -Force
     }
 }
-else {
-    Write-Output 'Файла вообще ещё нет, скачиваем в первый раз'
-    Invoke-WebRequest -Uri $ipfilter_source -OutFile $ipfilter_path
-}
-
+catch { Write-Host 'Не удалось скачать файл' -ForegroundColor Red }
 Write-Output 'Готово'
  
