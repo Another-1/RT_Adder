@@ -62,9 +62,9 @@ $cnt = 0
 
 $separator = Get-Separator
 
-foreach ( $torrent in $client_torrents ) {
+foreach ( $torrent in $clients_torrents ) {
     $cnt++
-    Write-Progress -Activity 'Ищу' -Status $torrent.name -PercentComplete ( $cnt * 100 / $client_torrents.Count )
+    Write-Progress -Activity 'Ищу' -Status $torrent.name -PercentComplete ( $cnt * 100 / $clients_torrents.Count )
     if (!$paths[$torrent.content_path] ) { $paths[$torrent.content_path] = $torrent.name }
     else {
         Write-Output ( 'Совпадение целевого пути ' + $torrent.content_path )
@@ -89,7 +89,7 @@ foreach ( $torrent in $client_torrents ) {
                     $torrent.$topic_id = $i.ToString()
                 }
             }
-            if ( ( Get-TorrentFiles $client $torrent.hash $true).count -gt 1 ) {
+            if ( ( Get-TorrentFiles $clients[$torrent.client_key] $torrent.hash $true).count -gt 1 ) {
                 Rename-Folder $clients[$torrent.client_key] $torrent ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) )  ( ( $torrent.content_path -replace ( ( '.*\' + $separator ), '' ) ) + '_' + $torrent.topic_id ) $true
             }
             else {
